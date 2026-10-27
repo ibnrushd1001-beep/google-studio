@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Remix Text to Speech</title>
+    <meta name="description" content="Studio for natural Egyptian dramatic text-to-speech with multi-character dialogue script mode, A/B comparison workspace, colloquial dialect polisher, and in-line dramatic tags." />
+    <meta property="og:title" content="Remix Text to Speech" />
+    <meta property="og:description" content="Studio for natural Egyptian dramatic text-to-speech with multi-character dialogue script mode, A/B comparison workspace, colloquial dialect polisher, and in-line dramatic tags." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Ignore WebSocket / HMR connection errors per environment specification
+      window.addEventListener('error', function(e) {
+        if (
+          e &&
+          (e.message?.includes('WebSocket') ||
+           e.filename?.includes('@vite/client') ||
+           e.error?.stack?.includes('WebSocket') ||
+           e.error?.stack?.includes('@vite/client'))
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(e) {
+        var reason = e && e.reason;
+        var msg = String((reason && (reason.message || reason)) || '');
+        var stack = String((reason && reason.stack) || '');
+        if (
+          msg.includes('WebSocket') ||
+          msg.includes('@vite/client') ||
+          stack.includes('WebSocket') ||
+          stack.includes('@vite/client')
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      }, true);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
