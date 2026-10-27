@@ -347,7 +347,106 @@ export function resolveGeminiVoice(voiceName: any): string {
   return "Kore";
 }
 
-// TTS Generation endpoint using gemini-3.1-flash-tts-preview
+interface ProcessedTtsScript {
+  cleanSpokenText: string;
+  extractedDirectives: string[];
+}
+
+/**
+ * Transforms bracketed dramatic stage tags ([وقفة قصيرة], [سكتة], [تنهيدة], etc.)
+ * into genuine acoustic silences (ellipses, commas) and native vocal bursts (<breath>, <sigh>),
+ * while extracting emotional/acting cues into directives and completely stripping them
+ * from spoken words so the neural model NEVER speaks the tag text aloud.
+ */
+export function convertScriptTagsForTts(rawText: string): ProcessedTtsScript {
+  const extractedDirectives: string[] = [];
+
+  const processed = rawText.replace(/\[(.*?)\]|\((.*?)\)/gu, (_match, p1, p2) => {
+    const content = (p1 || p2 || "").trim();
+    if (!content) return "";
+    const lower = content.toLowerCase();
+
+    // 1. Pauses, Silences & Dramatic Breaks -> Convert to realistic acoustic pauses
+    if (
+      lower.includes("وقفة") ||
+      lower.includes("سكتة") ||
+      lower.includes("صمت") ||
+      lower.includes("فاصل") ||
+      lower.includes("تردد") ||
+      lower.includes("استدراك") ||
+      lower.includes("انقطاع") ||
+      lower.includes("pause") ||
+      lower.includes("silence") ||
+      lower.includes("beat")
+    ) {
+      if (lower.includes("خاطفة") || lower.includes("micro") || lower.includes("نبضية")) {
+        return "، ";
+      }
+      if (
+        lower.includes("عميقة") ||
+        lower.includes("ترقب") ||
+        lower.includes("حبس أنفاس") ||
+        lower.includes("وداع")
+      ) {
+        return "... — ... ";
+      }
+      return "... ";
+    }
+
+    // 2. Breathing, Sighs & Gasps -> Natural vocal bursts
+    if (
+      lower.includes("تنهيدة") ||
+      lower.includes("زفير") ||
+      lower.includes("شهقة") ||
+      lower.includes("أنفاس") ||
+      lower.includes("تنفس") ||
+      lower.includes("breath") ||
+      lower.includes("sigh") ||
+      lower.includes("gasp")
+    ) {
+      if (lower.includes("تنهيدة") || lower.includes("sigh")) {
+        return "<sigh> ... ";
+      }
+      if (lower.includes("شهقة") || lower.includes("gasp")) {
+        return "<gasp> ... ";
+      }
+      return "<breath> ... ";
+    }
+
+    // 3. Laughter & Chuckles
+    if (
+      lower.includes("ضحك") ||
+      lower.includes("ابتسام") ||
+      lower.includes("قهقه") ||
+      lower.includes("laugh") ||
+      lower.includes("chuckle") ||
+      lower.includes("giggle")
+    ) {
+      return "<laugh> ";
+    }
+
+    // 4. Emotional Tone or Director Instruction (e.g. [بهمس], [بحزن شديد], [بغضب])
+    // Strip from spoken words completely, but extract as acting directive for the voice style
+    extractedDirectives.push(`Act with ${content} subtly without saying these instruction words`);
+    return " ";
+  });
+
+  // Clean up punctuation collisions and spacing
+  const cleanSpokenText = processed
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s+([،,.!؟?])/g, "$1")
+    .replace(/\.{4,}/g, "...")
+    .replace(/(?:[،,]\s*)+/g, "، ")
+    .replace(/\.\.\.\s*([،,])/g, "... ")
+    .trim();
+
+  return {
+    cleanSpokenText: cleanSpokenText || rawText.replace(/\[.*?\]|\(.*?\)/g, "").trim(),
+    extractedDirectives,
+  };
+}
+
+// TTS Generation endpoint using gemini-3.8-flash-tts with fallback
 app.post("/api/tts", async (req, res) => {
   try {
     const { text, voice = "Kore", style, voiceInstruction } = req.body;
@@ -373,7 +472,8 @@ app.post("/api/tts", async (req, res) => {
       },
     });
 
-    const trimmedText = text.trim();
+    const rawTrimmedText = text.trim();
+    const { cleanSpokenText, extractedDirectives } = convertScriptTagsForTts(rawTrimmedText);
 
     // Combine voice character/age persona directives and speaking style directives
     const styleParts: string[] = [];
@@ -383,10 +483,11 @@ app.post("/api/tts", async (req, res) => {
     if (typeof style === "string" && style.trim()) {
       styleParts.push(style.trim());
     }
-    styleParts.push("Pristine studio recording, natural expressive human acting, zero background hiss");
-    if (trimmedText.includes("[") && trimmedText.includes("]")) {
-      styleParts.push("Embody bracketed stage tags without speaking the bracket words");
+    if (extractedDirectives.length > 0) {
+      styleParts.push(extractedDirectives.join(". "));
     }
+    styleParts.push("Pristine studio recording, natural expressive human acting, zero background hiss");
+    styleParts.push("Never speak aloud any bracket words or pause markers; respect all ellipses as natural quiet silences and dramatic pauses");
 
     const combinedStyle = styleParts.join(". ");
 
@@ -402,20 +503,25 @@ app.post("/api/tts", async (req, res) => {
 
       for (const modelName of modelsToTry) {
         try {
-          // gemini-3.8 supports speechMetadata.style natively, preventing model from reading instructions aloud
-          // gemini-3.1 doesn't support speechMetadata, so we use explicit quote directive: Say in [style]: "[text]"
+          // For gemini-3.8-flash-tts, use cleanSpokenText (supports <sigh>, <breath>, <gasp>, <laugh> and ellipses)
+          // For gemini-3.1 or gemini-3.8-flash-lite, strip any <...> XML-style tags so model doesn't read XML aloud
+          const spokenTextForModel =
+            modelName === "gemini-3.8-flash-tts"
+              ? cleanSpokenText
+              : cleanSpokenText.replace(/<.*?>/g, "... ");
+
           const parts: any[] =
             modelName === "gemini-3.1-flash-tts-preview"
               ? [
                   {
                     text: combinedStyle
-                      ? `Say in ${combinedStyle}: "${trimmedText}"`
-                      : trimmedText,
+                      ? `Say in ${combinedStyle}: "${spokenTextForModel}"`
+                      : spokenTextForModel,
                   },
                 ]
               : [
                   {
-                    text: trimmedText,
+                    text: spokenTextForModel,
                     speechMetadata: {
                       style: combinedStyle,
                     },
@@ -479,7 +585,8 @@ app.post("/api/tts", async (req, res) => {
       sampleRate: 24000,
       durationSec,
       voice,
-      text: trimmedText,
+      text: rawTrimmedText,
+      cleanSpokenText,
     });
   } catch (error: any) {
     console.error("Gemini TTS Error:", error);

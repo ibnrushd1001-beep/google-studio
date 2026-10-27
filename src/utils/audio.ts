@@ -89,13 +89,7 @@ export function generateDescriptiveAudioFilename(
     }
   }
 
-  // 3. Delivery Style / Performance (e.g. تمثيل_مسرحي_درامي or حوار_عفوي or دبلجة_كرتون)
-  if (speech.deliveryStyleLabel) {
-    const cleanDelivery = sanitize(speech.deliveryStyleLabel, 24);
-    if (cleanDelivery) parts.push(cleanDelivery);
-  }
-
-  // 4. Emotion & Intensity (e.g. مندهش_متوسط or حماسي_عالي)
+  // 3. Emotion & Intensity (e.g. مندهش_متوسط or حماسي_عالي)
   if (speech.emotionLabel) {
     const cleanEmotion = sanitize(speech.emotionLabel, 16);
     const cleanIntensity = speech.intensityLabel ? sanitize(speech.intensityLabel, 12) : '';
@@ -105,13 +99,7 @@ export function generateDescriptiveAudioFilename(
     if (cleanStyle) parts.push(cleanStyle);
   }
 
-  // 5. Pitch or Pace if non-default
-  if (speech.pitchLabel && !speech.pitchLabel.includes('متوسط') && !speech.pitchLabel.includes('Medium')) {
-    const cleanPitch = sanitize(speech.pitchLabel, 15);
-    if (cleanPitch) parts.push(cleanPitch);
-  }
-
-  // 6. Acoustic Reverb Environment
+  // 4. Acoustic Reverb Environment
   const isRev =
     options?.isReverbEnabled ??
     Boolean(speech.reverbEnvironment && speech.reverbEnvironment !== 'dry_studio' && (speech.reverbLevel ?? 0) > 0);
@@ -124,18 +112,6 @@ export function generateDescriptiveAudioFilename(
     parts.push(`صدى_${envName}_${level}pct`);
   } else {
     parts.push('استوديو_معزول');
-  }
-
-  // 7. Script text excerpt (first 3 words, max 22 chars)
-  if (speech.text) {
-    const words = speech.text
-      .replace(/[\(\)\[\]\{\}«»""''،,.:;!؟?\/\\|*<>~`#@$%^&+=]/g, ' ')
-      .trim()
-      .split(/\s+/)
-      .slice(0, 3)
-      .join('_');
-    const cleanSnippet = sanitize(words, 22);
-    if (cleanSnippet) parts.push(cleanSnippet);
   }
 
   // 8. Timestamp (YYYYMMDD_HHmm)
