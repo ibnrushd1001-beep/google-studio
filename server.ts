@@ -1017,8 +1017,8 @@ Return ONLY a strict, valid JSON object with the following fields:
   "characterDescription": "وصف عربي وافٍ وجميل لشخصية ونبرة هذا الصوت المستنسخ"
 }`;
 
-    // Fast AI Model cascade: try gemini-2.5-flash first (fast & high quota), then gemini-3.8-flash
-    const candidateModels = ["gemini-2.5-flash", "gemini-3.8-flash"];
+    // Multimodal AI Model for voice clone analysis (using standard gemini-3.8-flash)
+    const candidateModels = ["gemini-3.8-flash"];
     let aiResponseText = "";
 
     for (const modelName of candidateModels) {
