@@ -34,6 +34,14 @@ import {
   VoiceCustomization,
   ReverbEnvironment,
   DramaticDeliveryStyle,
+  StagingDistance,
+  VocalCordsTension,
+  VocalCordTremor,
+  EmotionalArcConfig,
+  EmotionIntensity,
+  EmotionCategory,
+  EmotionLevel,
+  VoiceOption,
 } from '../types';
 
 // ==========================================
@@ -364,7 +372,7 @@ export const AGE_STAGES: AgeStageInfo[] = [
     description: 'Sweet, innocent, lively young child voice with tender playful cadence',
     arabicDescription: 'صوت طفل أو طفلة صغيرة (5 - 8 سنوات): عذب، بريء، عفوي ومفعم بالبهجة الطفولية',
     directive:
-      'Age persona: 5 to 8-year-old young child with sweet, adorable, innocent vocal tone, high pitch agility, and cheerful spontaneous childish cadence (طفل صغير في سن 5 إلى 8 سنوات بنبرة بريئة وعذبة)',
+      'Age persona: 5 to 8-year-old young child with sweet, adorable, innocent vocal tone, high pitch agility, and cheerful spontaneous childish cadence',
   },
   {
     id: 'child_9_12',
@@ -376,7 +384,7 @@ export const AGE_STAGES: AgeStageInfo[] = [
     description: 'Bright, articulate, confident school child / pre-teen',
     arabicDescription: 'صوت طفل أو طفلة في سن المدرسة (9 - 12 سنة): واثق، ذكي، نضر ومشرق بالحيوية',
     directive:
-      'Age persona: 9 to 12-year-old school child / pre-teen with articulate, natural youthful cadence, energetic confidence, and clear bright clarity (طفل في سن 9 إلى 12 سنة بنبرة نضرة وواثقة ومشرقة)',
+      'Age persona: 9 to 12-year-old school child / pre-teen with articulate, natural youthful cadence, energetic confidence, and clear bright clarity',
   },
   {
     id: 'teen_12_17',
@@ -560,7 +568,7 @@ export const RESONANCE_OPTIONS: ResonanceOptionInfo[] = [
     description: 'Acoustic vibration radiating from the ribcage, comforting and rich',
     arabicDescription: 'رنين دافئ وممتلئ صادر من عمق القفص الصدري يحمل وقاراً وألفة',
     directive:
-      'Resonance chamber: deep chest resonance (رنين صدري دافئ), rich lower harmonics and acoustic body',
+      'Resonance chamber: deep chest resonance, rich lower harmonics and acoustic body',
   },
   {
     id: 'throat',
@@ -636,6 +644,126 @@ export const TEXTURE_OPTIONS: TextureOptionInfo[] = [
     arabicDescription: 'صوت يخرج بصعوبة وكأن الحبال الصوتية مشدودة لكبت الدموع أو الغيظ',
     directive:
       'Vocal texture: emotionally constricted and choked timbre, as if speaking through a lump in the throat and fighting back intense emotion',
+  },
+];
+
+// ==========================================
+// 6.5. DEDICATED VOCAL CORDS DYNAMICS & STAGING PROXIMITY
+// تحكم متقدم في الأحبال الصوتية والانغلاق المزماري والمسافة الصوتية
+// ==========================================
+export interface VocalCordsTensionOptionInfo {
+  id: VocalCordsTension;
+  label: string;
+  arabicLabel: string;
+  description: string;
+  arabicDescription: string;
+  directive: string;
+}
+
+export const VOCAL_CORDS_TENSION_OPTIONS: VocalCordsTensionOptionInfo[] = [
+  {
+    id: 'taut_firm',
+    label: 'Taut & Firm Glottal Closure',
+    arabicLabel: 'مشدودة بانغلاق مزماري محكم',
+    description: 'Crisp glottal closure, minimal subglottic air leak, authoritative and resolute',
+    arabicDescription: 'انغلاق مزماري تام وقوي يعطي نبرة حازمة واثقة خالية من التسريب الهوائي',
+    directive: 'Vocal cords dynamic: taut vocal fold tension with firm glottal closure and decisive acoustic attack',
+  },
+  {
+    id: 'relaxed_breathy',
+    label: 'Relaxed & Breathy Closure',
+    arabicLabel: 'مرتخية مع تسريب هوائي همسي',
+    description: 'Subtle incomplete glottal closure allowing warm air leak for intimate tenderness',
+    arabicDescription: 'ارتخاء نسبي في الأحبال الصوتية يسمح بتسريب زفير دافئ يوحي بالهمس والضعف والرقة',
+    directive: 'Vocal cords dynamic: relaxed vocal folds with subtle incomplete glottal closure and warm breathy air wash',
+  },
+  {
+    id: 'pressed_creaky',
+    label: 'Pressed Glottal Fry',
+    arabicLabel: 'مضغوطة بحشرجة مزمارية خشنة',
+    description: 'Compressed medial compression creating low-frequency vocal fry and intense gravel',
+    arabicDescription: 'ضغط مزماري مشدود يعطي حشرجة صوتية خشنة توحي بالغضب أو الإنهاك أو النبرة البوليسية',
+    directive: 'Vocal cords dynamic: pressed phonation with localized vocal fry and gritty glottal friction',
+  },
+  {
+    id: 'elastic_melodic',
+    label: 'Flexible & Elastic Cords',
+    arabicLabel: 'مرنة ومطاطية طروبة',
+    description: 'High vocal fold elasticity allowing swift pitch transitions and melodic inflections',
+    arabicDescription: 'مرونة فائقة في حواف الأحبال الصوتية تمنح صوتاً طروباً سريع التلون بين النغمات',
+    directive: 'Vocal cords dynamic: highly flexible elastic vocal folds enabling rapid pitch modulation and melodic nuance',
+  },
+];
+
+export interface VocalCordTremorOptionInfo {
+  id: VocalCordTremor;
+  label: string;
+  arabicLabel: string;
+  description: string;
+  arabicDescription: string;
+  directive: string;
+}
+
+export const VOCAL_CORD_TREMOR_OPTIONS: VocalCordTremorOptionInfo[] = [
+  {
+    id: 'steady_pure',
+    label: 'Steady & Pure (Zero Tremor)',
+    arabicLabel: 'ثابتة نقية بدون رعشة',
+    description: 'Zero pitch micro-fluctuation, unwavering composure and stability',
+    arabicDescription: 'استقرار تام في التردد الصوتي بدون أي ارتجاف يعكس الثبات ورباطة الجأش',
+    directive: 'Vocal cord tremor: unwavering steady vocal pitch with zero involuntary tremor or vibration',
+  },
+  {
+    id: 'subtle_warmth',
+    label: 'Subtle Warm Vibrato',
+    arabicLabel: 'تموج دفء خفيف',
+    description: 'Gentle, natural acoustic vibrato adding human warmth and lyrical richness',
+    arabicDescription: 'تموج صوتي خفيف في نهايات الجمل يضفي دفئاً إنسانياً وأناقة وجدانية',
+    directive: 'Vocal cord tremor: gentle, natural acoustic micro-vibrato on sentence contours adding organic warmth',
+  },
+  {
+    id: 'emotional_tremor',
+    label: 'Emotional Quiver & Tremor',
+    arabicLabel: 'رعشة تأثر عاطفي متهدج',
+    description: 'Vulnerable quiver in vocal folds indicating suppressed tears, shock or deep awe',
+    arabicDescription: 'ارتعاش متقطع ومتهدج في الأحبال الصوتية يعكس التأثر الشديد أو حبس البكاء أو الصدمة',
+    directive: 'Vocal cord tremor: noticeable emotional quiver and trembling pitch micro-instability reflecting deep sorrow, shock or choked emotional duress',
+  },
+];
+
+export interface StagingDistanceOptionInfo {
+  id: StagingDistance;
+  label: string;
+  arabicLabel: string;
+  description: string;
+  arabicDescription: string;
+  directive: string;
+}
+
+export const STAGING_OPTIONS: StagingDistanceOptionInfo[] = [
+  {
+    id: 'intimate_close_mic',
+    label: 'Intimate Close-Mic (5cm)',
+    arabicLabel: 'همس وميكروفون مقرب جداً (5 سم)',
+    description: 'Near-ear cinematic proximity, intimate bass boost and breath nuances',
+    arabicDescription: 'تموضع صوتي سينمائي مقرب جداً من الأذن مع تأثير القرب (Proximity Effect) وأنفاس حميمية',
+    directive: 'Acoustic Staging Proximity: intimate close-mic positioning (5cm distance) with warm proximity effect and near-ear cinematic presence',
+  },
+  {
+    id: 'standard_studio',
+    label: 'Standard Studio (30cm)',
+    arabicLabel: 'تسجيل استوديو قياسي متزن (30 سم)',
+    description: 'Neutral, balanced studio microphone distance with clean fidelity',
+    arabicDescription: 'مسافة استوديو نموذجية ومتوازنة تضمن وضوحاً كاملاً ونقاءً طبيعياً',
+    directive: 'Acoustic Staging Proximity: balanced standard studio distance (30cm) with pristine transparent acoustic staging',
+  },
+  {
+    id: 'projected_stage',
+    label: 'Projected Theatrical Stage (2m)',
+    arabicLabel: 'إسقاط صوتي مسرحي بعيد (2 متر)',
+    description: 'Full theatrical vocal projection designed to carry across a large auditorium',
+    arabicDescription: 'إسقاط صوتي جهوري ممتلئ كالممثل على خشبة المسرح يملأ القاعة بحضور نفاذ',
+    directive: 'Acoustic Staging Proximity: projected theatrical stage acoustic delivery with powerful diaphragmatic carry and room-filling presence',
   },
 ];
 
@@ -753,6 +881,15 @@ export const PACE_OPTIONS: PaceOptionInfo[] = [
     arabicDescription: 'إيقاع متسارع يلهث من التوتر أو الخوف أو فوران الانفعال',
     directive:
       'Pace & Speed: rapid, breathlessly urgent and agitated pacing, hurried delivery reflecting tense distress, panic or bursting emotional excitement',
+  },
+  {
+    id: 'ultra_fast',
+    label: 'Ultra-Fast & Blitz (Tier 4)',
+    arabicLabel: 'خاطف وفائق السرعة (المستوى الرابع الأعلى)',
+    description: 'Ultra-fast delivery, rapid-fire words, peak tempo with crisp phonetics',
+    arabicDescription: 'سرعة تدفق كلامية فائقة وخاطفة هي الأعلى مع الحفاظ على وضوح مخارج الحروف',
+    directive:
+      'Pace & Speed: ultra-fast, rapid-fire, peak-tempo lightning delivery (Tier 4 speed), accelerated word flow with razor-sharp diction and breathless velocity',
   },
 ];
 
@@ -1014,23 +1151,55 @@ export const DELIVERY_STYLE_DIRECTIVES: Record<DramaticDeliveryStyle, DramaticDe
   },
 };
 
-// ==========================================
-// 9. MASTER PROMPT BUILDER
-// Translates all granular acting parameters into studio-quality instructions
-// ==========================================
+export interface BuildDramaticPromptOptions {
+  voiceOption?: VoiceOption;
+  deliveryStyle?: DramaticDeliveryStyle;
+  emotionCategory?: EmotionCategory;
+  emotionLevel?: EmotionLevel;
+  currentDialect?: EgyptianDialect;
+  scriptText?: string;
+  customization?: VoiceCustomization;
+}
+
 export function buildDramaticPrompt(
-  customization: VoiceCustomization,
-  emotionPromptPrefix: string,
-  extraVoiceInstruction?: string
+  customizationOrOptions: VoiceCustomization | BuildDramaticPromptOptions,
+  emotionPromptPrefix: string = '',
+  extraVoiceInstruction?: string,
+  _scriptText?: string
 ): string {
+  let customization: VoiceCustomization;
+  let emotionPrefix = emotionPromptPrefix;
+  let extraInstruction = extraVoiceInstruction;
+
+  if (
+    typeof customizationOrOptions === 'object' &&
+    ('voiceOption' in customizationOrOptions || 'deliveryStyle' in customizationOrOptions)
+  ) {
+    const opts = customizationOrOptions as BuildDramaticPromptOptions;
+    const v = opts.voiceOption;
+    customization = {
+      gender: v?.gender || opts.customization?.gender || 'male',
+      age: v?.customization?.age || opts.customization?.age || 'youth_18_35',
+      dialect: opts.currentDialect || opts.customization?.dialect || 'cairo',
+      exactAge: v?.exactAge || opts.customization?.exactAge || 30,
+      deliveryStyle: opts.deliveryStyle || opts.customization?.deliveryStyle,
+      ...(v?.customization || {}),
+      ...(opts.customization || {}),
+    };
+    emotionPrefix = opts.emotionLevel?.promptPrefix || '';
+    extraInstruction = v?.isCustom ? undefined : v?.voiceInstruction;
+  } else {
+    customization = customizationOrOptions as VoiceCustomization;
+  }
+
   const isEnergyOrb =
     customization.isEnergyOrb ||
-    (extraVoiceInstruction &&
-      (extraVoiceInstruction.includes('NABD') ||
-        extraVoiceInstruction.includes('نبض') ||
-        extraVoiceInstruction.includes('الكاشف')));
+    (extraInstruction &&
+      (extraInstruction.includes('NABD') ||
+        extraInstruction.includes('نبض') ||
+        extraInstruction.includes('الكاشف')));
   const isCasual = customization.isCasualConversation;
-  const genderWord = customization.gender === 'female' ? 'female (أنثى)' : 'male (ذكر)';
+  const genderWord = customization.gender === 'female' ? 'female' : 'male';
   const isChild = (customization.exactAge || 10) <= 15;
   const baseTractName =
     customization.gender === 'female'
@@ -1040,11 +1209,11 @@ export function buildDramaticPrompt(
   // 1. Core Speaker Identity Anchor & Prompt Dominance Shield (TOP PRIORITY)
   // Prevents dramatic emotion prompts from overriding the speaker's vocal anatomy
   const identityLock = isEnergyOrb
-    ? 'CRITICAL SPEAKER IDENTITY LOCK - NABD / AL-KASHEF (كرة الطاقة نبض / الكاشف): The speaker is strictly "Nabd" (نبض): a luminous, ageless, genderless, universal sphere of pure human consciousness. It does NOT belong to any mortal age, human gender, or cultural group. The Revealer (الكاشف) is NOT an emotional character living inside the drama, but a visual and acoustic instrument representing the process of awareness itself. The character is forged entirely through its disciplined METHOD OF THINKING, never through emotions. Do NOT rush, do NOT sneer, and do NOT become emotional (لا تتسرع، لا تسخر). You are the steady, objective voice that explains, reveals, and dissects with calm clarity: "توقف لحظة..." (Pause for a moment...). Sound Design ID: Combine the calm confidence of the lucid revealer and the grounded certitude of an empirical scientist, placing the listener inside a scientific investigation office (مكتب التحقيق العلمي). The Revealer does not live inside the event; it illuminates what is within it'
+    ? 'CRITICAL SPEAKER IDENTITY LOCK - NABD / SCIENTIFIC REVEALER: The speaker is strictly "Nabd": a luminous, ageless, genderless, universal sphere of pure human consciousness. The Revealer is an auditory instrument representing the process of awareness itself. The character is forged entirely through its disciplined method of thinking, never through emotional reactivity. Do not rush, do not sneer, and do not become melodramatic. You are the steady, objective voice that explains, reveals, and dissects with calm clarity: "Pause for a moment...". Sound Design ID: Combine the calm confidence of the lucid revealer and the grounded certitude of an empirical scientist in a forensic investigation chamber. The Revealer illuminates the event with unwavering analytical composure'
     : isChild
     ? `CRITICAL SPEAKER IDENTITY LOCK: The speaker is strictly a young Egyptian ${
-        customization.gender === 'female' ? 'girl (طفلة صغيرة)' : 'boy (طفل صغير)'
-      }, exactly ${customization.exactAge || 10} years old. Base vocal tract: ${baseTractName} (حنجرة طفولية بريئة نضرة). This physical vocal tract, childlike larynx, and natural pitch register MUST remain 100% stable throughout. Under NO circumstances should emotional descriptors turn this voice into an adult, a different speaker, or a theatrical caricature. The emotion is felt by this exact child`
+        customization.gender === 'female' ? 'girl' : 'boy'
+      }, exactly ${customization.exactAge || 10} years old. Base vocal tract: ${baseTractName} (pure, innocent, bright youthful larynx). This physical vocal tract, childlike larynx, and natural pitch register MUST remain 100% stable throughout. Under NO circumstances should emotional descriptors turn this voice into an adult, a different speaker, or a theatrical caricature. The emotion is felt by this exact child`
     : `CRITICAL SPEAKER IDENTITY LOCK: You MUST strictly preserve the underlying ${genderWord} persona, physical vocal tract, and acoustic identity. The emotion is an expressive nuance felt by this EXACT character, never a new speaker, different larynx, or distorted vocal identity`;
 
   const promptDominanceShield =
@@ -1052,10 +1221,10 @@ export function buildDramaticPrompt(
 
   // 2. Studio Quality & Sound Design Mandate
   const studioMandate = isEnergyOrb
-    ? 'Sound Design Mandate: Studio recording designed as a Scientific Investigation Office (مكتب التحقيق العلمي). Crystal-clear forensic speech clarity, transparent acoustic presence, zero room flutter or theatrical melodrama, clinical intelligibility, and unwavering analytical composure'
+    ? 'Sound Design Mandate: Studio recording designed as a Scientific Investigation Chamber. Crystal-clear forensic speech clarity, transparent acoustic presence, zero room flutter or theatrical melodrama, clinical intelligibility, and unwavering analytical composure'
     : isCasual
-    ? 'Studio-grade acoustic recording with pristine crystal-clear purity, zero background noise or distortion, and 100% genuine everyday colloquial Egyptian conversational delivery (حوار مصري واقعي وعفوي 100% بدون أي تصنع أو مبالغة درامية)'
-    : 'Studio-grade acoustic recording with crystal-clear high fidelity, pristine vocal purity, zero background noise or distortion, and 100% natural human dramatic character acting (أداء تمثيلي بشري واقعي عالي النقاء خالي من أي قراءة آلية)';
+    ? 'Studio-grade acoustic recording with pristine crystal-clear purity, zero background noise or distortion, and 100% genuine everyday colloquial Egyptian conversational delivery with zero theatrical exaggeration or melodrama'
+    : 'Studio-grade acoustic recording with crystal-clear high fidelity, pristine vocal purity, zero background noise or distortion, and 100% natural human dramatic character acting without robotic or synthetic artifacts';
 
   // 3. Dialect & Sub-Style
   const dialectInfo = DIALECTS[customization.dialect || 'cairo'];
@@ -1072,10 +1241,10 @@ export function buildDramaticPrompt(
   let ageDirective = '';
   if (isEnergyOrb) {
     ageDirective =
-      'Entity persona: Timeless, ageless, and non-gendered energy orb of pure consciousness (كرة طاقة وعي خارج محددات العمر والجنس البشري)';
+      'Entity persona: Timeless, ageless, and non-gendered energy orb of pure consciousness';
   } else if (customization.exactAge) {
     const stage = getStageFromAge(customization.exactAge);
-    ageDirective = `Character persona: ${genderWord}, exactly ${customization.exactAge} years old (${customization.exactAge} سنة). ${stage.directive}`;
+    ageDirective = `Character persona: ${genderWord}, exactly ${customization.exactAge} years old. ${stage.directive}`;
   } else {
     const stage =
       AGE_STAGES.find((s) => s.id === customization.age) || AGE_STAGES[1];
@@ -1126,27 +1295,65 @@ export function buildDramaticPrompt(
     deliveryDirective = DELIVERY_STYLE_DIRECTIVES.casual_talk.directive;
   }
 
+  // 8.5. Dedicated Vocal Cords Dynamics (انغلاق ورعشة الأحبال الصوتية)
+  const vocalCordsParts: string[] = [];
+  if (customization.vocalCordsTension) {
+    const tensionOpt = VOCAL_CORDS_TENSION_OPTIONS.find((t) => t.id === customization.vocalCordsTension);
+    if (tensionOpt) vocalCordsParts.push(tensionOpt.directive);
+  }
+  if (customization.vocalCordTremor) {
+    const tremorOpt = VOCAL_CORD_TREMOR_OPTIONS.find((tr) => tr.id === customization.vocalCordTremor);
+    if (tremorOpt) vocalCordsParts.push(tremorOpt.directive);
+  }
+  const vocalCordsDirective = vocalCordsParts.join('. ');
+
+  // 8.6. Acoustic Staging Proximity & Mic Distance (المسافة الصوتية وقرب الميكروفون)
+  let stagingDirective = '';
+  if (customization.stagingDistance) {
+    const stOpt = STAGING_OPTIONS.find((s) => s.id === customization.stagingDistance);
+    if (stOpt) stagingDirective = stOpt.directive;
+  }
+
+  // 8.7. Dynamic Emotional Arc (المنحنى الشعوري التدريجي في الجملة)
+  let emotionalArcDirective = '';
+  if (customization.emotionalArc?.enabled) {
+    const startName = customization.emotionalArc.startEmotion || customization.emotionalArc.startEmotionId || 'initial composure';
+    const targetName = customization.emotionalArc.targetEmotion || customization.emotionalArc.targetEmotionId || 'climactic peak';
+    const transPoint = customization.emotionalArc.climaxPoint || customization.emotionalArc.transitionPoint || 'final third';
+    emotionalArcDirective = `DYNAMIC EMOTIONAL ARC: Deliver with dynamic emotional progression. Begin with tone of ${startName}, smoothly transitioning around ${transPoint} of speech into ${targetName} with authentic psychological escalation`;
+  }
+
+  // 8.8. Natural Thought Hesitation Beats (سكتات التردد الطبيعية)
+  let hesitationDirective = '';
+  if (customization.smartHesitationBeats) {
+    hesitationDirective =
+      'NATURAL HESITATION & THOUGHT BEATS: Respect all commas and punctuation as organic 250ms thinking micro-hesitations, reflecting spontaneous human thought-formation before important words';
+  }
+
   // 9. Emotional Nuance & Tone Coloring (Decoupled & Fine-Tuned)
   let emotionDirective = '';
-  if (emotionPromptPrefix && emotionPromptPrefix.trim()) {
+  if (emotionPrefix && emotionPrefix.trim()) {
     const intensity = customization.emotionIntensity || 'medium';
     let intensityDirective = '';
     if (intensity === 'low') {
       intensityDirective =
-        'Intensity Level: Gentle & Restrained (شدة هادئة ولطيفة). Express this feeling softly and naturally without vocal strain or shouting, keeping the speaker voice completely recognizable and steady';
+        'Intensity Level: Gentle & Restrained. Express this feeling softly and naturally without vocal strain or shouting, keeping the speaker voice completely recognizable and steady';
     } else if (intensity === 'medium') {
       intensityDirective =
-        'Intensity Level: Balanced & Natural (شدة متوسطة متزنة). Express this emotion clearly yet naturally, fully maintaining the original vocal character and pitch register';
+        'Intensity Level: Balanced & Natural. Express this emotion clearly yet naturally, fully maintaining the original vocal character and pitch register';
+    } else if (intensity === 'high') {
+      intensityDirective =
+        'Intensity Level: Theatrical yet anchored. Express the emotion vividly while strictly keeping the speaker identity anchored';
     } else {
       intensityDirective =
-        'Intensity Level: Theatrical yet anchored (شدة درامية منضبطة). Express the emotion vividly while strictly keeping the speaker identity anchored';
+        'Intensity Level: Extreme Climactic Peak (Tier 4). Deliver with maximum dramatic intensity, electrifying conviction, and climactic emotional resonance while maintaining pristine phonetic clarity';
     }
-    emotionDirective = `EMOTIONAL COLORING (Subordinated to Character Identity): ${emotionPromptPrefix.trim()}. ${intensityDirective}`;
+    emotionDirective = `EMOTIONAL COLORING (Subordinated to Character Identity): ${emotionPrefix.trim()}. ${intensityDirective}`;
   }
 
   // 10. Gestural Restriction (Strictly NO unprompted laughter, giggling, smiling or sighing)
   const gesturalRestriction =
-    'ABSOLUTE GESTURAL PURITY RULE: Do NOT produce any laughing, chuckling, giggling, smiling phonation, gasping, or sighing sounds unless the script text explicitly contains an exact bracketed tag like [ضحكة خفيفة] or [ابتسامة في الصوت] or [تنهيدة]. Emotional inflections and tones must ONLY modulate pitch, rhythm, cadence, and mood without any unprompted sighs, chuckles, or laughter';
+    'ABSOLUTE GESTURAL PURITY RULE: Do NOT produce any laughing, chuckling, giggling, smiling phonation, gasping, or sighing sounds unless the script text explicitly contains an exact bracketed tag. Emotional inflections and tones must ONLY modulate pitch, rhythm, cadence, and mood without any unprompted sighs, chuckles, or laughter';
 
   // 11. Reverb & Acoustic Recording Environment Directive
   let reverbDirective = '';
@@ -1157,7 +1364,7 @@ export function buildDramaticPrompt(
       : (reverbEnv === 'dry_studio' ? 0 : REVERB_ENVIRONMENTS[reverbEnv]?.defaultLevel || 40);
   const envInfo = REVERB_ENVIRONMENTS[reverbEnv] || REVERB_ENVIRONMENTS.dry_studio;
   reverbDirective = isEnergyOrb && (reverbEnv === 'small_room' || reverbEnv === 'dry_studio')
-    ? `Acoustic sound design environment: Scientific Investigation Office (مكتب التحقيق العلمي). Forensic analytical vocal capture with ${rawLevel}% subtle acoustic presence, razor-sharp speech transparency, near-field clinical clarity, and zero theatrical melodrama`
+    ? `Acoustic sound design environment: Scientific Investigation Chamber. Forensic analytical vocal capture with ${rawLevel}% subtle acoustic presence, razor-sharp speech transparency, near-field clinical clarity, and zero theatrical melodrama`
     : envInfo.directive(rawLevel);
 
   // 12. Assemble Prompt Directives in strict priority order
@@ -1170,9 +1377,13 @@ export function buildDramaticPrompt(
     ageDirective,
     pitchDirective,
     timbreDirective,
+    vocalCordsDirective,
+    stagingDirective,
     paceDirective,
     reverbDirective,
     deliveryDirective,
+    emotionalArcDirective,
+    hesitationDirective,
     emotionDirective,
   ];
 
@@ -1195,5 +1406,24 @@ export function generateDramaticInstruction(
   extraVoiceInstruction?: string
 ): string {
   return buildDramaticPrompt(customization, emotionPromptPrefix, extraVoiceInstruction);
+}
+
+/**
+ * Helper to get or dynamically synthesize an EmotionLevel for any intensity (including extreme Tier 4)
+ */
+export function getEmotionLevel(cat: EmotionCategory, intensity: EmotionIntensity): EmotionLevel {
+  if (intensity === 'extreme') {
+    if (cat.levels.extreme) return cat.levels.extreme;
+    const baseHigh = cat.levels.high;
+    return {
+      level: 'extreme',
+      label: `Peak ${baseHigh.label}`,
+      arabicLabel: 'أقصى ذروة (مستوى رابع حاد جداً)',
+      promptPrefix: `Climactic and ultra-intense delivery at absolute emotional peak: ${baseHigh.promptPrefix}, with breathtaking dramatic power, electrifying conviction, and climactic emotional resonance`,
+      description: `Maximum theatrical peak of ${cat.label}`,
+      arabicDescription: `الذروة الدرامية القصوى لشعور ${cat.arabicShortLabel} بأقصى درجات التأثير والتعبير`,
+    };
+  }
+  return cat.levels[intensity] || cat.levels.medium;
 }
 

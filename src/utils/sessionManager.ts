@@ -41,7 +41,7 @@ export interface LastSessionState {
   selectedIntensity: EmotionIntensity;
   selectedReverbEnv: ReverbEnvironment;
   selectedReverbLevel: number;
-  activeMode: 'solo' | 'compare';
+  activeMode: 'solo' | 'compare' | 'batch';
   isRtl: boolean;
   isDirectivesOpen?: boolean;
   isVoiceMenuOpen?: boolean;

@@ -49,7 +49,7 @@ export type ResonanceChamber = 'chest' | 'throat' | 'head' | 'nasal';
 
 export type VocalTexture = 'pure' | 'breathy' | 'raspy' | 'constricted';
 
-export type PaceLevel = 'very_slow' | 'slow' | 'balanced' | 'fast' | 'urgent';
+export type PaceLevel = 'very_slow' | 'slow' | 'balanced' | 'fast' | 'urgent' | 'ultra_fast';
 
 export type BreathingPattern = 'contemplative' | 'natural' | 'breathless';
 
@@ -89,24 +89,35 @@ export interface VoiceCustomization {
   // Gender & Exact Age
   gender?: Gender;
   exactAge?: number; // Exact age in years (e.g. 4 to 85)
-  age: AgeCategory;
+  age?: AgeCategory;
 
   // Dialect & Sub-style
-  dialect: EgyptianDialect;
+  dialect?: EgyptianDialect;
   dialectSubStyle?: DialectSubStyle;
 
   // Pitch & Melody
-  pitch: PitchLevel;
+  pitch?: PitchLevel;
   melody?: MelodyType;
 
   // Timbre, Resonance & Texture
-  timbre: VocalTimbre;
+  timbre?: VocalTimbre;
   resonance?: ResonanceChamber;
   texture?: VocalTexture;
 
   // Pace, Tempo & Breathing
-  pace: PaceLevel;
+  pace?: PaceLevel;
   breathing?: BreathingPattern;
+
+  // Staging Distance & Acoustic Proximity (المسافة الصوتية وقرب الميكروفون)
+  stagingDistance?: StagingDistance;
+
+  // Vocal Cords & Glottal Dynamics (تحكم متقدم في الأحبال الصوتية والانغلاق المزماري)
+  vocalCordsTension?: VocalCordsTension;
+  vocalCordTremor?: VocalCordTremor;
+
+  // Dynamic Emotional Arc & Smart Hesitation Beats
+  emotionalArc?: EmotionalArcConfig;
+  smartHesitationBeats?: boolean;
 
   // Reverb & Recording Environment (صدى الصوت وبيئة التسجيل)
   reverbEnvironment?: ReverbEnvironment;
@@ -126,6 +137,48 @@ export interface VoiceCustomization {
   selectedEmotionId?: string;
 
   customNotes?: string;
+}
+
+export type StagingDistance = 'intimate_close_mic' | 'standard_studio' | 'projected_stage';
+
+export type VocalCordsTension =
+  | 'taut_firm'          // مشدودة بانغلاق محكم
+  | 'relaxed_breathy'    // مرتخية مع تسريب هواء همسي
+  | 'pressed_creaky'     // مضغوطة بحشرجة مزمارية
+  | 'elastic_melodic';   // مرنة مطاطية طروبة
+
+export type VocalCordTremor =
+  | 'steady_pure'        // ثابتة نقية دون رعشة
+  | 'subtle_warmth'      // تموج دفء خفيف
+  | 'emotional_tremor';  // رعشة تأثر عاطفي متهدج
+
+export interface EmotionalArcConfig {
+  enabled: boolean;
+  startEmotionId?: string;
+  startEmotion?: string;
+  transitionPoint?: 'early' | 'middle' | 'climax';
+  climaxPoint?: 'final_sentence' | 'final_third' | 'mid_script';
+  targetEmotionId?: string;
+  targetEmotion?: string;
+}
+
+export interface BatchScriptItem {
+  id: string;
+  text: string;
+  voiceId?: string;
+  dialect?: EgyptianDialect;
+  deliveryStyle?: DramaticDeliveryStyle;
+  emotionId?: string;
+  intensity?: EmotionIntensity;
+  emotionIntensity?: EmotionIntensity;
+  status: 'idle' | 'generating' | 'completed' | 'error';
+  audioBase64?: string;
+  audioUrl?: string;
+  durationSec?: number;
+  errorMessage?: string;
+  error?: string;
+  filename?: string;
+  speech?: GeneratedSpeech;
 }
 
 export type VoiceCategory = 'all' | 'children' | 'adults' | 'alex' | 'nabd' | 'custom';
@@ -178,7 +231,7 @@ export interface StyleOption {
   iconName: string;
 }
 
-export type EmotionIntensity = 'low' | 'medium' | 'high';
+export type EmotionIntensity = 'low' | 'medium' | 'high' | 'extreme';
 
 export interface EmotionLevel {
   level: EmotionIntensity;
@@ -202,6 +255,7 @@ export interface EmotionCategory {
     low: EmotionLevel;
     medium: EmotionLevel;
     high: EmotionLevel;
+    extreme?: EmotionLevel;
   };
 }
 

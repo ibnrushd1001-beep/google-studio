@@ -11,6 +11,8 @@ import { BackupRestoreModal, StudioBackupData } from './components/BackupRestore
 import { VocalGuideModal, VocalRecipe } from './components/VocalGuideModal';
 import { ReverbEnvironmentControl } from './components/ReverbEnvironmentControl';
 import { SectionTitlesModal, DEFAULT_SECTION_TITLES } from './components/SectionTitlesModal';
+import { VocalCordsControl } from './components/VocalCordsControl';
+import { BatchWorkspace } from './components/BatchWorkspace';
 import {
   VoiceOption,
   GeneratedSpeech,
@@ -69,6 +71,8 @@ import {
   HelpCircle,
   Waves,
   Lock,
+  ListOrdered,
+  Activity,
 } from 'lucide-react';
 
 export default function App() {
@@ -152,7 +156,7 @@ export default function App() {
     }),
   ];
 
-  const [activeMode, setActiveMode] = useState<'solo' | 'compare'>(() => {
+  const [activeMode, setActiveMode] = useState<'solo' | 'compare' | 'batch'>(() => {
     return initialSession?.activeMode || 'solo';
   });
 
@@ -579,6 +583,23 @@ export default function App() {
     if (customization.dialect) {
       setCurrentDialect(customization.dialect);
     }
+    setSelectedVoiceOption((prev) => ({
+      ...prev,
+      customization: {
+        ...prev.customization,
+        ...customization,
+      },
+    }));
+  };
+
+  const handleVocalCordsChange = (updated: Partial<VoiceCustomization>) => {
+    setSelectedVoiceOption((prev) => ({
+      ...prev,
+      customization: {
+        ...prev.customization,
+        ...updated,
+      },
+    }));
   };
 
   // Permanent deletion for ANY character or actor voice (built-in or custom)
@@ -800,12 +821,18 @@ export default function App() {
           selectedVoiceOption.customization?.isEnergyOrb ||
           selectedVoiceOption.id.includes('nabd'),
         customNotes: selectedVoiceOption.customization?.customNotes,
+        vocalCordsTension: selectedVoiceOption.customization?.vocalCordsTension,
+        vocalCordTremor: selectedVoiceOption.customization?.vocalCordTremor,
+        stagingDistance: selectedVoiceOption.customization?.stagingDistance,
+        emotionalArc: selectedVoiceOption.customization?.emotionalArc,
+        smartHesitationBeats: selectedVoiceOption.customization?.smartHesitationBeats,
       };
 
       const dramaticInstruction = buildDramaticPrompt(
         effectiveCustomization,
         activeLevel.promptPrefix,
-        selectedVoiceOption.isCustom ? undefined : selectedVoiceOption.voiceInstruction
+        selectedVoiceOption.isCustom ? undefined : selectedVoiceOption.voiceInstruction,
+        text.trim()
       );
 
       const safeVoice = sanitizeGeminiVoice(selectedVoiceOption.baseVoice);
@@ -1129,14 +1156,28 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveMode('compare')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeMode === 'compare'
                   ? 'bg-white text-[#1F1E1B] shadow-xs'
                   : 'text-[#6B665A] hover:text-[#1F1E1B] hover:bg-white/50'
               }`}
             >
               <Columns className="w-4 h-4 text-[#5A6E82]" />
-              <span>{isRtl ? 'مقارنة الأداء (A/B)' : 'A/B Comparison'}</span>
+              <span>{isRtl ? 'مقارنة (A/B)' : 'A/B Comparison'}</span>
+            </button>
+
+            <button
+              type="button"
+              id="batch-mode-tab-btn"
+              onClick={() => setActiveMode('batch')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeMode === 'batch'
+                  ? 'bg-white text-[#1F1E1B] shadow-xs'
+                  : 'text-[#6B665A] hover:text-[#1F1E1B] hover:bg-white/50'
+              }`}
+            >
+              <ListOrdered className="w-4 h-4 text-[#C86446]" />
+              <span>{isRtl ? 'طابور الدفعات' : 'Batch Queue'}</span>
             </button>
           </div>
 
@@ -1496,7 +1537,14 @@ export default function App() {
               )}
             </div>
 
-            {/* 4. Standalone Reverb & Acoustic Environment Control (صدى الصوت والبيئة الصوتية منفصلة تماماً خارج استوديو التخصيص) */}
+            {/* 4. Dedicated Vocal Cords Dynamics & Advanced Dramatic Acting (تحكم الأحبال الصوتية والمقترحات 1 و 2 و 4) */}
+            <VocalCordsControl
+              customization={selectedVoiceOption.customization}
+              onChange={handleVocalCordsChange}
+              isRtl={isRtl}
+            />
+
+            {/* 5. Standalone Reverb & Acoustic Environment Control (صدى الصوت والبيئة الصوتية منفصلة تماماً خارج استوديو التخصيص) */}
             <ReverbEnvironmentControl
               reverbEnvironment={selectedReverbEnv}
               reverbLevel={selectedReverbLevel}
@@ -1909,6 +1957,19 @@ export default function App() {
             initialText={text}
           />
         )}
+
+        {/* MODE 3: BATCH SCRIPT QUEUE GENERATION (نمط توليد دفعات متعددة) */}
+        {activeMode === 'batch' && (
+          <BatchWorkspace
+            voices={allAvailableVoices}
+            currentDialect={currentDialect}
+            isRtl={isRtl}
+            defaultVoice={selectedVoiceOption}
+            defaultDeliveryStyle={deliveryStyle}
+            defaultEmotionId={selectedEmotionId}
+            defaultIntensity={selectedIntensity}
+          />
+        )}
       </main>
 
       {/* Voice Clone Modal for Audio File Upload & Feature Extraction */}
@@ -1965,7 +2026,7 @@ export default function App() {
       />
 
       {/* Sticky Bottom Dock for Instant Audio Generation Access */}
-      {text.trim() && (
+      {activeMode === 'solo' && text.trim() && (
         <div className="fixed bottom-3 inset-x-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 max-w-lg w-full z-40 animate-fade-in pointer-events-auto">
           <div className="bg-white/95 backdrop-blur-md border border-[#E5E1D8] shadow-2xl rounded-2xl p-2.5 flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 min-w-0 pr-1">

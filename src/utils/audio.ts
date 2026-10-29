@@ -89,6 +89,21 @@ export function generateDescriptiveAudioFilename(
     }
   }
 
+  // 2.5. 2 or 3 words from the script text (cleaned of brackets and punctuation)
+  if (speech.text && typeof speech.text === 'string') {
+    const strippedScript = speech.text
+      .replace(/\[.*?\]|\(.*?\)/gu, ' ')
+      .replace(/[\(\)\[\]\{\}«»""''،,.:;!؟?\/\\|*<>~`#@$%^&+=_-]/gu, ' ')
+      .trim();
+    const words = strippedScript.split(/\s+/).filter((w) => w.length > 0).slice(0, 3);
+    if (words.length > 0) {
+      const cleanSnippet = sanitize(words.join('_'), 28);
+      if (cleanSnippet) {
+        parts.push(cleanSnippet);
+      }
+    }
+  }
+
   // 3. Emotion & Intensity (e.g. مندهش_متوسط or حماسي_عالي)
   if (speech.emotionLabel) {
     const cleanEmotion = sanitize(speech.emotionLabel, 16);

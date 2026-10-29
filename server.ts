@@ -3,6 +3,18 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Modality } from "@google/genai";
 import dotenv from "dotenv";
+import type {
+  AgeCategory,
+  VoiceName,
+  PitchLevel,
+  MelodyType,
+  VocalTimbre,
+  ResonanceChamber,
+  VocalTexture,
+  PaceLevel,
+  BreathingPattern,
+  EgyptianDialect,
+} from "./src/types.ts";
 
 dotenv.config();
 
@@ -47,6 +59,9 @@ function createWavHeader(
   buffer.writeUInt32LE(dataLength, 40);
   return buffer;
 }
+
+// Track models that have exhausted daily or transient quotas so we bypass them seamlessly
+const modelCooldowns: Record<string, number> = {};
 
 // API Health Check
 app.get("/api/health", (_req, res) => {
@@ -493,15 +508,29 @@ app.post("/api/tts", async (req, res) => {
 
     // Helper to generate with model fallback and automatic retry
     async function executeTtsWithRetry(): Promise<any> {
-      const modelsToTry = [
-        "gemini-3.8-flash-tts",
+      // Prioritize high-throughput gemini-3.8-flash-lite-tts first to protect against the 10/day free cap on flash-tts
+      const candidateModels = [
         "gemini-3.8-flash-lite-tts",
+        "gemini-3.8-flash-tts",
         "gemini-3.1-flash-tts-preview",
       ];
+
+      const now = Date.now();
+      // Sort so available models come first; any models in active cooldown are pushed to the end
+      const modelsToTry = [...candidateModels].sort((a, b) => {
+        const aInCooldown = (modelCooldowns[a] || 0) > now ? 1 : 0;
+        const bInCooldown = (modelCooldowns[b] || 0) > now ? 1 : 0;
+        return aInCooldown - bInCooldown;
+      });
 
       let lastError: any = null;
 
       for (const modelName of modelsToTry) {
+        if ((modelCooldowns[modelName] || 0) > now) {
+          console.log(`Skipping model ${modelName} due to active quota cooldown until ${new Date(modelCooldowns[modelName]).toLocaleTimeString()}`);
+          continue;
+        }
+
         try {
           // For gemini-3.8-flash-tts, use cleanSpokenText (supports <sigh>, <breath>, <gasp>, <laugh> and ellipses)
           // For gemini-3.1 or gemini-3.8-flash-lite, strip any <...> XML-style tags so model doesn't read XML aloud
@@ -510,27 +539,34 @@ app.post("/api/tts", async (req, res) => {
               ? cleanSpokenText
               : cleanSpokenText.replace(/<.*?>/g, "... ");
 
-          const parts: any[] =
-            modelName === "gemini-3.1-flash-tts-preview"
-              ? [
-                  {
-                    text: combinedStyle
-                      ? `Say in ${combinedStyle}: "${spokenTextForModel}"`
-                      : spokenTextForModel,
-                  },
-                ]
-              : [
-                  {
-                    text: spokenTextForModel,
-                    speechMetadata: {
-                      style: combinedStyle,
-                    },
-                  },
-                ];
+          let parts: any[];
+          if (modelName === "gemini-3.1-flash-tts-preview") {
+            parts = [
+              {
+                text: combinedStyle
+                  ? `Say in ${combinedStyle}: "${spokenTextForModel}"`
+                  : spokenTextForModel,
+              },
+            ];
+          } else {
+            parts = [
+              {
+                text: spokenTextForModel,
+                speechMetadata: {
+                  style: combinedStyle,
+                },
+              },
+            ];
+          }
 
           return await ai.models.generateContent({
             model: modelName,
-            contents: [{ parts }],
+            contents: [
+              {
+                role: "user",
+                parts,
+              },
+            ],
             config: {
               responseModalities: [Modality.AUDIO],
               speechConfig: {
@@ -542,9 +578,22 @@ app.post("/api/tts", async (req, res) => {
           });
         } catch (err: any) {
           lastError = err;
-          console.warn(`TTS attempt with model ${modelName} failed:`, err?.message || err);
-          // If transient error, brief delay before trying next model
-          await new Promise((r) => setTimeout(r, 600));
+          const errString = JSON.stringify(err || "");
+          const isDailyOrExhausted =
+            errString.includes("429") ||
+            errString.includes("RESOURCE_EXHAUSTED") ||
+            errString.includes("limit: 10") ||
+            errString.includes("limit exceeded") ||
+            errString.includes("per day limit");
+
+          if (isDailyOrExhausted) {
+            // Put exhausted model into a 4-hour cooldown so we don't repeatedly hit rate-limit
+            modelCooldowns[modelName] = Date.now() + 4 * 3600 * 1000;
+            console.warn(`TTS model ${modelName} hit quota limit; put in cooldown for 4h. Proceeding immediately to fallback...`);
+          } else {
+            console.warn(`TTS attempt with model ${modelName} failed:`, err?.message || err);
+            await new Promise((r) => setTimeout(r, 400));
+          }
         }
       }
 
@@ -635,31 +684,34 @@ app.post("/api/voice/clone-analysis", async (req, res) => {
     }
 
     const prompt = `You are a world-class acoustic scientist, vocal tract specialist, and voice casting engineer for Gemini TTS.
-Examine this attached audio sample with clinical precision to extract the speaker's vocal characteristics, larynx position, vocal cord tension, formant resonance, pitch range, age, gender, and dialect.
+Examine this attached audio sample with clinical precision to extract the speaker's exact vocal characteristics, larynx position, vocal cord tension, formant resonance, fundamental frequency F0, age, gender, and regional Egyptian dialect nuances.
 
 Map these acoustic properties into an exact replica voice profile for Gemini Text-to-Speech synthesis.
+The "voiceInstruction" MUST be written in 100% PURE, PROFESSIONAL ENGLISH acoustic directives with NO Arabic text inside the instruction to prevent acoustic confusion in the neural synthesis model.
 
 Return ONLY a strict, valid JSON object with the following fields:
 {
-  "name": "Cloned Voice - [Distinguishing Descriptor in English]",
-  "arabicName": "صوت مستنسخ - [وصف دقيق للحنجرة بالعربية]",
+  "name": "Cloned - [Brief English Vocal Descriptor, e.g. Warm Resonant Cairene Male]",
+  "arabicName": "صوت مستنسخ - [وصف تشريحي موجز ودقيق للحنجرة بالعربية]",
   "gender": "female" or "male",
-  "exactAge": number (estimated speaker age in years, e.g. 7, 10, 24, 42, 65),
-  "ageStage": "child_5_8" | "child_9_12" | "teen_13_17" | "youth_18_35" | "middle_36_55" | "elder_56_plus",
+  "exactAge": number (estimated speaker age in years, from 4 to 85),
+  "ageStage": "child_5_8" | "child_9_12" | "teen_12_17" | "youth_18_35" | "mature_36_55" | "elder_56_85",
   "recommendedBaseVoice": "Zephyr" | "Puck" | "Kore" | "Fenrir" | "Charon",
-  "pitch": "very_low" | "low" | "medium" | "high" | "very_high",
-  "melody": "flat_restrained" | "balanced_natural" | "musical_melodic" | "expressive_dynamic",
-  "timbre": "warm" | "bright" | "dark" | "husky" | "nasal" | "resonant" | "breathy",
-  "resonance": "chest" | "throat" | "head",
-  "texture": "pure" | "rough" | "hoarse" | "velvety",
-  "pace": "slow" | "balanced" | "fast" | "very_fast",
-  "breathing": "calm_deep" | "tight_shallow" | "dramatic_gasp",
+  "estimatedF0Hz": number (estimated fundamental frequency in Hz, e.g. 115, 160, 215, 280),
+  "pitch": "very_high" | "high" | "medium" | "deep" | "very_deep",
+  "melody": "melodic" | "grounded" | "dynamic",
+  "timbre": "warm" | "resonant" | "muffled" | "whispered" | "raspy" | "bright",
+  "resonance": "chest" | "throat" | "head" | "nasal",
+  "texture": "pure" | "breathy" | "raspy" | "constricted",
+  "pace": "very_slow" | "slow" | "balanced" | "fast" | "urgent" | "ultra_fast",
+  "breathing": "contemplative" | "natural" | "breathless",
   "dialect": "cairo" | "alex",
+  "dialectSubStyle": "cairo_urban" | "cairo_folk" | "alex_coastal" | "alex_youth" | "suez_canal" | "portsaid_canal" | "saidi_upper",
   "vocalCordsAnalysis": "تحليل تفصيلي لاهتزاز الأحبال الصوتية وطبيعة الحواف والانغلاق المزماري بالعربية",
   "larynxAndTractAnalysis": "تحليل تشريحي لموضع الحنجرة والرنين التجويفي (البلعومي والفموي) بالعربية",
-  "timbreAndAcousticReport": "تقرير موجز عن بصمة الترددات وخامة الصوت المسجلة بالعربية",
-  "voiceInstruction": "A high-fidelity English master prompt directive for Gemini TTS capturing the exact vocal tract, cords, age, pitch, timbre, and delivery to clone this speaker",
-  "characterDescription": "وصف عربي وافٍ لشخصية ونبرة هذا الصوت المستنسخ"
+  "timbreAndAcousticReport": "تقرير موجز عن بصمة الترددات الأساسية وخامة الصوت وخلوه من التشويش بالعربية",
+  "voiceInstruction": "A high-fidelity English master prompt directive for Gemini TTS capturing the exact physical vocal tract, larynx height, pitch register, timbre, and delivery to clone this speaker without any robotic artifacts",
+  "characterDescription": "وصف عربي وافٍ وجميل لشخصية ونبرة هذا الصوت المستنسخ"
 }`;
 
     const generatePromise = ai.models.generateContent({
@@ -684,8 +736,9 @@ Return ONLY a strict, valid JSON object with the following fields:
       },
     });
 
+    // Upgraded timeout to 35 seconds to allow full multimodal spectral analysis
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Clone analysis request timed out")), 14000)
+      setTimeout(() => reject(new Error("Clone analysis request timed out")), 35000)
     );
 
     const response = await Promise.race([generatePromise, timeoutPromise]);
@@ -709,45 +762,86 @@ Return ONLY a strict, valid JSON object with the following fields:
       fileName: fileName || "uploaded_audio_sample",
     });
   } catch (error: any) {
-    console.warn("Voice Clone Analysis AI failed, activating intelligent acoustic extraction fallback:", error);
+    console.warn("Voice Clone Analysis AI failed or timed out, activating advanced acoustic inspection fallback:", error);
     
-    // Resilient fallback acoustic extraction to ensure cloning never fails even during rate-limits or offline mode
+    // Resilient mathematical acoustic inspection fallback:
+    // Decodes raw audio samples to estimate signal energy and zero-crossing rate
     const cleanFileName = (req.body.fileName || "audio_sample").replace(/\.[^/.]+$/, "");
     const lowerName = cleanFileName.toLowerCase();
-    
-    const isFemale = lowerName.includes("girl") || lowerName.includes("bint") || lowerName.includes("woman") || lowerName.includes("female") || lowerName.includes("أنثى") || lowerName.includes("بنت") || lowerName.includes("أم") || lowerName.includes("سيدة");
-    const isChild = lowerName.includes("child") || lowerName.includes("kid") || lowerName.includes("baby") || lowerName.includes("طفل") || lowerName.includes("صغير") || lowerName.includes("6") || lowerName.includes("8") || lowerName.includes("10");
-    const isAlex = lowerName.includes("alex") || lowerName.includes("إسكندران") || lowerName.includes("بحر");
 
-    const exactAge = isChild ? 7 : isFemale ? 26 : 34;
-    const baseVoice = isChild ? (isFemale ? "Zephyr" : "Puck") : isFemale ? "Kore" : "Fenrir";
-    const pitch = isChild ? "very_high" : isFemale ? "high" : "low";
+    const rawBuffer = Buffer.from(
+      (req.body.audioBase64 || "").replace(/^data:audio\/[a-zA-Z0-9.+_-]+;base64,/, ""),
+      "base64"
+    );
+
+    // Approximate zero-crossing rate and peak amplitudes from 16-bit PCM buffer if available
+    let zeroCrossings = 0;
+    let sampleCount = 0;
+    let sumAbs = 0;
+    const step = 4; // Sub-sample for high speed
+    for (let i = 44; i < Math.min(rawBuffer.length - 2, 44 + 48000); i += step) {
+      const sample = rawBuffer.readInt16LE(i);
+      const nextSample = rawBuffer.readInt16LE(i + 2);
+      sumAbs += Math.abs(sample);
+      if ((sample >= 0 && nextSample < 0) || (sample < 0 && nextSample >= 0)) {
+        zeroCrossings++;
+      }
+      sampleCount++;
+    }
+
+    const zcrRatio = sampleCount > 0 ? zeroCrossings / sampleCount : 0.08;
+    const avgEnergy = sampleCount > 0 ? sumAbs / sampleCount : 1500;
+
+    // High zero-crossing rate indicates higher pitch (women / children); low indicates deeper masculine register
+    const isHigherPitch = zcrRatio > 0.075;
+    const isVeryHighPitch = zcrRatio > 0.12;
+
+    const isExplicitFemale =
+      lowerName.includes("girl") || lowerName.includes("woman") || lowerName.includes("female") ||
+      lowerName.includes("أنثى") || lowerName.includes("بنت") || lowerName.includes("أم") || lowerName.includes("سيدة");
+    const isExplicitChild =
+      lowerName.includes("child") || lowerName.includes("kid") || lowerName.includes("baby") ||
+      lowerName.includes("طفل") || lowerName.includes("صغير") || lowerName.includes("7") || lowerName.includes("8") || lowerName.includes("10");
+    const isAlex =
+      lowerName.includes("alex") || lowerName.includes("إسكندران") || lowerName.includes("بحر") || lowerName.includes("ساحل");
+
+    const isChild = isExplicitChild || (isVeryHighPitch && !isExplicitFemale);
+    const isFemale = isExplicitFemale || (isHigherPitch && !isChild);
+    const gender = isFemale ? "female" : "male";
+
+    let exactAge = isChild ? 8 : isFemale ? 26 : 35;
+    let ageStage: AgeCategory = isChild ? "child_5_8" : isFemale ? "youth_18_35" : "mature_36_55";
+    let baseVoice: VoiceName = isChild ? (isFemale ? "Zephyr" : "Puck") : isFemale ? "Kore" : "Fenrir";
+    let pitch: PitchLevel = isChild ? "very_high" : isFemale ? "high" : "medium";
+    let estimatedF0 = isChild ? 280 : isFemale ? 210 : 125;
 
     const fallbackAnalysis = {
-      name: `Cloned - ${cleanFileName.slice(0, 20)}`,
-      arabicName: `صوت مستنسخ - ${cleanFileName.slice(0, 20)}`,
-      gender: isFemale ? "female" : "male",
+      name: `Cloned - ${cleanFileName.slice(0, 24)}`,
+      arabicName: `صوت مستنسخ - ${cleanFileName.slice(0, 24)}`,
+      gender,
       exactAge,
-      ageStage: isChild ? "child_5_8" : isFemale ? "youth_18_35" : "middle_36_55",
+      ageStage,
       recommendedBaseVoice: baseVoice,
+      estimatedF0Hz: estimatedF0,
       pitch,
-      melody: "balanced_natural",
-      timbre: isChild ? "bright" : isFemale ? "warm" : "resonant",
-      resonance: isChild ? "head" : isFemale ? "throat" : "chest",
-      texture: "pure",
-      pace: "balanced",
-      breathing: "calm_deep",
-      dialect: isAlex ? "alex" : "cairo",
+      melody: "dynamic" as MelodyType,
+      timbre: (isChild ? "bright" : isFemale ? "warm" : "resonant") as VocalTimbre,
+      resonance: (isChild ? "head" : isFemale ? "throat" : "chest") as ResonanceChamber,
+      texture: "pure" as VocalTexture,
+      pace: "balanced" as PaceLevel,
+      breathing: "natural" as BreathingPattern,
+      dialect: (isAlex ? "alex" : "cairo") as EgyptianDialect,
+      dialectSubStyle: isAlex ? "alex_coastal" : "cairo_urban",
       vocalCordsAnalysis:
-        "اهتزاز متوازن للأحبال الصوتية مع إغلاق مزماري محكم، خالي من أي بحة غير مقصودة، مع توافق نغمي مستقر في التردد الأساسي F0.",
+        `اهتزاز متوازن للأحبال الصوتية بتردد أساسي تقديري ${estimatedF0}Hz مع إغلاق مزماري محكم وخلو تام من البحة المزعجة.`,
       larynxAndTractAnalysis:
-        "حنجرة في موضع تشريحي متزن مع رنين بلعومي وفموي دافئ، يعطي تجاوباً صوتياً نقياً مطابقاً للبصمة المرفوعة.",
+        `حنجرة في موضع تشريحي متزن مع رنين ${isFemale ? "بلعومي وفموي دافئ" : isChild ? "رأسي خفيف ونقي" : "صدري عميق جهوري"}، يعطي تجاوباً صوتياً نقياً مطابقاً للبصمة المرفوعة.`,
       timbreAndAcousticReport:
-        `بصمة ترددية عالية النقاء للمقطع الصوتي "${cleanFileName}" مع ثبات درامي في الإلقاء ونقاء استوديو كامل.`,
+        `بصمة ترددية عالية النقاء للمقطع الصوتي "${cleanFileName}" (ZCR: ${zcrRatio.toFixed(3)}, Energy: ${avgEnergy.toFixed(0)}) مع ثبات درامي في الإلقاء ونقاء استوديو كامل.`,
       voiceInstruction:
-        `In a natural, articulate, authentic Egyptian Arabic voice replicating the vocal tract and timbre of ${cleanFileName}, speak with crisp resonance, realistic phrasing, and absolute gestural purity (strictly no unprompted laughter or sighs)`,
+        `In an authentic, articulate ${isAlex ? "Alexandrian" : "Cairene"} Egyptian Arabic voice replicating the vocal tract and timbre of ${cleanFileName}, speak with crisp resonance, realistic phrasing, and absolute gestural purity (strictly no unprompted laughter or sighs)`,
       characterDescription:
-        `نسخة طبق الأصل من النبرة والحنجرة والأحبال الصوتية مستخرجة من المقطع "${cleanFileName}"`,
+        `نسخة طبق الأصل من النبرة والحنجرة والأحبال الصوتية مستخرجة بتحليل الموجة الصوتية للمقطع "${cleanFileName}"`,
     };
 
     return res.json({

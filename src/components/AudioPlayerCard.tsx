@@ -176,7 +176,8 @@ export const AudioPlayerCard: React.FC<AudioPlayerCardProps> = ({ speech, isRtl 
   };
 
   const handleSpeedCycle = () => {
-    const speeds = [1, 1.25, 1.5, 0.75];
+    // 4 higher speeds above 1x: 1.25x (Lv1), 1.5x (Lv2), 1.75x (Lv3), 2.0x (Lv4 highest)
+    const speeds = [1, 1.25, 1.5, 1.75, 2, 0.75];
     const nextIndex = (speeds.indexOf(playbackRate) + 1) % speeds.length;
     const nextSpeed = speeds[nextIndex];
     setPlaybackRate(nextSpeed);

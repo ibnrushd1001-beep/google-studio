@@ -1290,7 +1290,7 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
                       ? 'أ) سرعة الكلمات وتدفق العبارات (Speech Tempo):'
                       : 'A) Speech Tempo & Pace:'}
                   </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                     {PACE_OPTIONS.map((pOpt) => {
                       const isSelected = pace === pOpt.id;
                       return (
@@ -1304,8 +1304,8 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
                               : 'border-[#E5E1D8] bg-white hover:bg-[#FAF8F5] text-[#7D786E]'
                           }`}
                         >
-                          <p className="font-semibold">
-                            {isRtl ? pOpt.arabicLabel.split(' ')[0] : pOpt.label}
+                          <p className="font-semibold truncate">
+                            {isRtl ? pOpt.arabicLabel.split('(')[0].trim() : pOpt.label}
                           </p>
                         </button>
                       );

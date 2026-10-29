@@ -6,6 +6,7 @@ import {
   DramaticDeliveryStyle,
 } from '../types';
 import { EMOTIONS } from '../emotions';
+import { getEmotionLevel } from '../utils/dramaticVoice';
 import {
   Sparkles,
   Flame,
@@ -245,8 +246,7 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
 
   const activeEmotion =
     EMOTIONS.find((e) => e.id === selectedEmotionId) || EMOTIONS[0];
-  const activeLevel: EmotionLevel =
-    activeEmotion.levels[selectedIntensity] || activeEmotion.levels.medium;
+  const activeLevel: EmotionLevel = getEmotionLevel(activeEmotion, selectedIntensity);
   const activeArchetype =
     DRAMATIC_STYLES.find((s) => s.id === deliveryStyle) || DRAMATIC_STYLES[0];
 
@@ -337,7 +337,7 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
     });
   }, [selectedFilter, searchQuery]);
 
-  const intensityKeys: EmotionIntensity[] = ['low', 'medium', 'high'];
+  const intensityKeys: EmotionIntensity[] = ['low', 'medium', 'high', 'extreme'];
 
   const handleArchetypeClick = (archetype: DramaticStyleArchetype) => {
     onSelectDeliveryStyle(archetype.id);
@@ -571,12 +571,13 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
           </span>
         </div>
 
-        {/* The 3 Levels Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {/* The 4 Intensity Levels Buttons (بما فيها المستوى الرابع الأعلى: أقصى ذروة درامية) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
           {intensityKeys.map((key, index) => {
-            const levelObj = activeEmotion.levels[key];
+            const levelObj = getEmotionLevel(activeEmotion, key);
             const isLevelActive = selectedIntensity === key;
             const isRecommended = key === 'low' || key === 'medium';
+            const isExtreme = key === 'extreme';
             return (
               <button
                 key={key}
@@ -585,26 +586,39 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
                 onClick={() => onSelectIntensity(key)}
                 className={`p-2.5 rounded-xl border text-start transition-all cursor-pointer ${
                   isLevelActive
-                    ? 'bg-white text-[#43413E] border-[#6B705C] ring-2 ring-[#6B705C]/30 shadow-xs'
+                    ? isExtreme
+                      ? 'bg-gradient-to-br from-red-50 to-white text-[#43413E] border-red-500 ring-2 ring-red-500/30 shadow-xs'
+                      : 'bg-white text-[#43413E] border-[#6B705C] ring-2 ring-[#6B705C]/30 shadow-xs'
                     : 'bg-white/50 text-[#7D786E] border-transparent hover:bg-white hover:border-[#DCD7CC]'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1 gap-1">
                   <span
                     className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
                       isLevelActive
-                        ? 'bg-[#6B705C] text-white'
+                        ? isExtreme
+                          ? 'bg-red-600 text-white'
+                          : 'bg-[#6B705C] text-white'
+                        : isExtreme
+                        ? 'bg-red-100 text-red-800'
                         : 'bg-[#EDE9E1] text-[#7D786E]'
                     }`}
                   >
-                    {isRtl ? `المستوى ${index + 1}` : `Level ${index + 1}`}
+                    {isExtreme
+                      ? (isRtl ? 'المستوى 4 (الأعلى)' : 'Level 4 (Max)')
+                      : (isRtl ? `المستوى ${index + 1}` : `Level ${index + 1}`)}
                   </span>
                   {isRecommended && (
                     <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
                       {isRtl ? 'ثبات ممتاز' : 'Stable'}
                     </span>
                   )}
-                  <span className="text-[11px] font-bold text-[#43413E]">
+                  {isExtreme && (
+                    <span className="text-[9px] font-bold text-red-700 bg-red-50 px-1.5 py-0.2 rounded">
+                      {isRtl ? 'ذروة حادة' : 'Peak'}
+                    </span>
+                  )}
+                  <span className="text-[11px] font-bold text-[#43413E] truncate">
                     {isRtl ? levelObj.arabicLabel : levelObj.label}
                   </span>
                 </div>
