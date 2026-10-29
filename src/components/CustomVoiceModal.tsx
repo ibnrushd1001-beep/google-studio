@@ -17,7 +17,12 @@ import {
   Gender,
   EmotionIntensity,
   ReverbEnvironment,
+  VocalCordsTension,
+  VocalCordTremor,
+  StagingDistance,
+  EmotionalArcConfig,
 } from '../types';
+import { VocalCordsControl } from './VocalCordsControl';
 import {
   BASE_GEMINI_VOICES,
   DIALECTS,
@@ -65,6 +70,7 @@ import {
   Theater,
   Home,
   Radio,
+  Activity,
 } from 'lucide-react';
 
 interface CustomVoiceModalProps {
@@ -176,10 +182,10 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
   const [exactAge, setExactAge] = useState<number>(10);
   const [ageStage, setAgeStage] = useState<AgeCategory>('child_8_11');
 
-  // Base vocal tract lock (Pins Zephyr for girls or Puck for boys to protect against prompt dominance)
-  const [baseVoiceLocked, setBaseVoiceLocked] = useState<boolean>(true);
+  // Base vocal tract lock (Optional lock - disabled by default to give full freedom)
+  const [baseVoiceLocked, setBaseVoiceLocked] = useState<boolean>(false);
 
-  // Emotional intensity level: low, medium, high (recommended: low or medium)
+  // Emotional intensity level: low, medium, high, extreme
   const [emotionIntensity, setEmotionIntensity] =
     useState<EmotionIntensity>('medium');
 
@@ -208,6 +214,21 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
   const [pace, setPace] = useState<PaceLevel>('balanced');
   const [breathing, setBreathing] = useState<BreathingPattern>('natural');
 
+  // Vocal Cords Dynamics & Glottal Mechanics
+  const [vocalCordsTension, setVocalCordsTension] =
+    useState<VocalCordsTension>('elastic_melodic');
+  const [vocalCordTremor, setVocalCordTremor] =
+    useState<VocalCordTremor>('steady_pure');
+  const [stagingDistance, setStagingDistance] =
+    useState<StagingDistance>('standard_studio');
+  const [emotionalArc, setEmotionalArc] = useState<EmotionalArcConfig>({
+    enabled: false,
+    startEmotion: 'natural_neutral',
+    targetEmotion: 'astonished',
+    climaxPoint: 'final_third',
+  });
+  const [smartHesitationBeats, setSmartHesitationBeats] = useState<boolean>(true);
+
   // Reverb & Acoustic Recording Environment (صدى الصوت وبيئة التسجيل)
   const [reverbEnvironment, setReverbEnvironment] =
     useState<ReverbEnvironment>('dry_studio');
@@ -224,8 +245,8 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
     useState<string>('casual_conversation');
 
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'elements' | 'baseVoice' | 'preview'>(
-    initialTab || 'elements'
+  const [activeTab, setActiveTab] = useState<'elements' | 'vocalCords' | 'baseVoice' | 'preview'>(
+    initialTab === 'baseVoice' || initialTab === 'preview' ? initialTab : 'elements'
   );
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [larynxFilter, setLarynxFilter] = useState<'all' | 'female' | 'male'>('all');
@@ -287,7 +308,7 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
       setExactAge(derivedAge);
       setAgeStage(cust?.age || getStageFromAge(derivedAge).id);
       setAutoCastActor(false);
-      setBaseVoiceLocked(cust?.baseVoiceLock ?? (derivedAge <= 15));
+      setBaseVoiceLocked(cust?.baseVoiceLock ?? false);
       setEmotionIntensity(cust?.emotionIntensity || 'medium');
 
       if (cust) {
@@ -313,6 +334,11 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
         );
         setIsCasualConversation(cust.isCasualConversation || false);
         setCustomNotes(cust.customNotes || '');
+        setVocalCordsTension(cust.vocalCordsTension || 'elastic_melodic');
+        setVocalCordTremor(cust.vocalCordTremor || 'steady_pure');
+        setStagingDistance(cust.stagingDistance || 'standard_studio');
+        if (cust.emotionalArc) setEmotionalArc(cust.emotionalArc);
+        if (cust.smartHesitationBeats !== undefined) setSmartHesitationBeats(cust.smartHesitationBeats);
       } else {
         setDialect(editingVoice.id.includes('alex') ? 'alex' : 'cairo');
         setDialectSubStyle(editingVoice.id.includes('alex') ? 'alex_coastal' : 'cairo_urban');
@@ -329,6 +355,16 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
         setReverbLevel(0);
         setIsCasualConversation(false);
         setCustomNotes('');
+        setVocalCordsTension('elastic_melodic');
+        setVocalCordTremor('steady_pure');
+        setStagingDistance('standard_studio');
+        setEmotionalArc({
+          enabled: false,
+          startEmotion: 'natural_neutral',
+          targetEmotion: 'astonished',
+          climaxPoint: 'final_third',
+        });
+        setSmartHesitationBeats(true);
       }
     } else {
       // Check if user has an existing saved draft in localStorage to restore
@@ -358,6 +394,11 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
             if (parsed.isCasualConversation !== undefined) setIsCasualConversation(parsed.isCasualConversation);
             if (parsed.emotionIntensity) setEmotionIntensity(parsed.emotionIntensity);
             if (parsed.selectedEmotionId) setSelectedEmotionId(parsed.selectedEmotionId);
+            if (parsed.vocalCordsTension) setVocalCordsTension(parsed.vocalCordsTension);
+            if (parsed.vocalCordTremor) setVocalCordTremor(parsed.vocalCordTremor);
+            if (parsed.stagingDistance) setStagingDistance(parsed.stagingDistance);
+            if (parsed.emotionalArc) setEmotionalArc(parsed.emotionalArc);
+            if (parsed.smartHesitationBeats !== undefined) setSmartHesitationBeats(parsed.smartHesitationBeats);
             if (parsed.customNotes) setCustomNotes(parsed.customNotes);
             if (parsed.baseVoiceLocked !== undefined) setBaseVoiceLocked(parsed.baseVoiceLocked);
             hasDraft = true;
@@ -426,6 +467,11 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
       emotionIntensity,
       selectedEmotionId,
       customNotes,
+      vocalCordsTension,
+      vocalCordTremor,
+      stagingDistance,
+      emotionalArc,
+      smartHesitationBeats,
       editingVoiceId: editingVoice?.id || null,
       savedAt: Date.now(),
     };
@@ -461,13 +507,18 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
     emotionIntensity,
     selectedEmotionId,
     customNotes,
+    vocalCordsTension,
+    vocalCordTremor,
+    stagingDistance,
+    emotionalArc,
+    smartHesitationBeats,
     editingVoice?.id,
   ]);
 
   // Sync tab when initialTab changes while modal is open
   useEffect(() => {
     if (initialTab && isOpen) {
-      setActiveTab(initialTab);
+      setActiveTab(initialTab === 'baseVoice' || initialTab === 'preview' ? initialTab : 'elements');
     }
   }, [initialTab, isOpen]);
 
@@ -486,15 +537,15 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
     const stage = getStageFromAge(clamped);
     setAgeStage(stage.id);
 
-    // If age is child (<= 15) and baseVoiceLocked is true:
-    if (clamped <= 15 && baseVoiceLocked) {
+    // Only adapt base voice if user explicitly enabled baseVoiceLocked
+    if (baseVoiceLocked) {
       setBaseVoice(gender === 'female' ? 'Zephyr' : 'Puck');
     }
   };
 
   const handleGenderSelect = (newGender: Gender) => {
     setGender(newGender);
-    if (exactAge <= 15 || baseVoiceLocked) {
+    if (baseVoiceLocked) {
       setBaseVoice(newGender === 'female' ? 'Zephyr' : 'Puck');
     } else if (autoCastActor) {
       const optimal = smartAutoCastVoice(newGender, exactAge, pitch, timbre);
@@ -514,10 +565,8 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
       else if (foundStage.defaultAge <= 55) setPitch(gender === 'male' ? 'deep' : 'medium');
       else setPitch(gender === 'male' ? 'very_deep' : 'deep');
 
-      // Auto pin base voice for child categories: Zephyr for female, Puck for male!
-      if (foundStage.defaultAge <= 15) {
+      if (baseVoiceLocked) {
         setBaseVoice(gender === 'female' ? 'Zephyr' : 'Puck');
-        setBaseVoiceLocked(true);
       }
     }
   };
@@ -543,6 +592,14 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
     }
   };
 
+  const handleVocalCordsUpdate = (updated: Partial<VoiceCustomization>) => {
+    if (updated.vocalCordsTension !== undefined) setVocalCordsTension(updated.vocalCordsTension);
+    if (updated.vocalCordTremor !== undefined) setVocalCordTremor(updated.vocalCordTremor);
+    if (updated.stagingDistance !== undefined) setStagingDistance(updated.stagingDistance);
+    if (updated.emotionalArc !== undefined) setEmotionalArc(updated.emotionalArc);
+    if (updated.smartHesitationBeats !== undefined) setSmartHesitationBeats(updated.smartHesitationBeats);
+  };
+
   if (!isOpen) return null;
 
   const subStyleObj = DIALECT_SUB_STYLES.find((s) => s.id === dialectSubStyle);
@@ -552,6 +609,7 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
     : (resolvedDialect === 'alex' ? (isRtl ? 'إسكندراني' : 'Alexandrian') : (isRtl ? 'قاهري' : 'Cairene'));
 
   const currentCustomization: VoiceCustomization = {
+    baseVoice,
     gender,
     exactAge,
     age: ageStage,
@@ -572,6 +630,11 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
     emotionIntensity,
     selectedEmotionId,
     customNotes,
+    vocalCordsTension,
+    vocalCordTremor,
+    stagingDistance,
+    emotionalArc,
+    smartHesitationBeats,
   };
 
   const activeStageInfo = getStageFromAge(exactAge);
@@ -760,7 +823,19 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
             }`}
           >
             <Sliders className="w-4 h-4" />
-            <span>{isRtl ? 'عناصر التمثيل والأداء والحنجرة الأساسية' : 'Acting Elements & Base Voice'}</span>
+            <span>{isRtl ? 'عناصر التمثيل والأداء' : 'Acting Elements'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('vocalCords')}
+            className={`py-3 px-3 border-b-2 flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${
+              activeTab === 'vocalCords'
+                ? 'border-[#C86446] text-[#C86446]'
+                : 'border-transparent text-[#7D786E] hover:text-[#43413E]'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>{isRtl ? 'ميكانيكا الأحبال ورنين الحنجرة 🫁' : 'Vocal Cords & Glottis 🫁'}</span>
           </button>
           <button
             type="button"
@@ -1037,7 +1112,7 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
                 </div>
               </div>
 
-              {/* 3. BASE VOICE PINNING & PROMPT DOMINANCE SHIELD CARD */}
+              {/* 3. BASE VOICE SELECTION & OPTIONAL LOCK CARD */}
               <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 shadow-2xs space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2.5">
@@ -1046,37 +1121,20 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
                     </div>
                     <div>
                       <h4 className="font-bold text-xs text-[#43413E] flex items-center gap-2">
-                        <span>{isRtl ? '3. تثبيت الحنجرة الأساسية (Base Voice Lock):' : '3. Pin Base Vocal Tract:'}</span>
+                        <span>{isRtl ? '3. الحنجرة الأساسية المختارة (Base Vocal Tract):' : '3. Selected Base Vocal Tract:'}</span>
                         <span className="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900 font-bold text-xs">
-                          {baseVoice} ({gender === 'female' ? (isRtl ? 'بنات' : 'Girls') : (isRtl ? 'بنين' : 'Boys')})
+                          {baseVoice} ({gender === 'female' ? (isRtl ? 'بنات / إناث' : 'Female') : (isRtl ? 'بنين / ذكور' : 'Male')})
                         </span>
                       </h4>
                       <p className="text-[11px] text-[#7D786E]">
                         {isRtl
-                          ? 'Zephyr للبنات أو Puck للبنين: يمنع تحول نبرة الصوت لشخص آخر عند تغيير الانفعالات'
-                          : 'Zephyr for girls / Puck for boys: prevents voice morphing during emotions'}
+                          ? 'حرية كاملة لاختيار أي حنجرة (Kore أو Zephyr للبنات، Puck أو Fenrir أو Charon) دون أي إجبار على التثبيت'
+                          : 'Complete freedom to select any base voice (Kore, Zephyr, Puck, Fenrir, Charon) with no forced locks'}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetVoice = gender === 'female' ? 'Zephyr' : 'Puck';
-                        setBaseVoice(targetVoice);
-                        setBaseVoiceLocked(true);
-                        setAutoCastActor(false);
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 font-bold text-xs hover:bg-amber-100 transition-all cursor-pointer shadow-2xs"
-                    >
-                      {isRtl
-                        ? gender === 'female'
-                          ? '🔒 تثبيت حنجرة Zephyr للبنات'
-                          : '🔒 تثبيت حنجرة Puck للبنين'
-                        : `Lock ${gender === 'female' ? 'Zephyr' : 'Puck'}`}
-                    </button>
-
                     <button
                       type="button"
                       onClick={() => setBaseVoiceLocked(!baseVoiceLocked)}
@@ -1085,10 +1143,36 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
                           ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
                           : 'bg-white text-[#7D786E] border-[#DCD7CC]'
                       }`}
+                      title={isRtl ? 'تثبيت اختياري للحنجرة لمنع تغيرها مع المشاعر الحادة' : 'Toggle optional lock'}
                     >
-                      {baseVoiceLocked ? (isRtl ? '✓ الحنجرة مثبتة' : 'Locked') : (isRtl ? 'غير مثبتة' : 'Unlocked')}
+                      {baseVoiceLocked ? (isRtl ? '🔒 الحنجرة مثبتة' : 'Locked') : (isRtl ? '🔓 حرة (غير مقيدة)' : 'Unlocked')}
                     </button>
                   </div>
+                </div>
+
+                {/* Base Voice Selector Quick Buttons */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                  {BASE_GEMINI_VOICES.map((b) => {
+                    const isSelected = baseVoice === b.name;
+                    return (
+                      <button
+                        key={b.name}
+                        type="button"
+                        onClick={() => {
+                          setBaseVoice(b.name);
+                          setAutoCastActor(false);
+                        }}
+                        className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-white border-amber-500 ring-2 ring-amber-400/30 text-amber-900 font-bold shadow-2xs'
+                            : 'bg-white/60 border-amber-200/60 text-[#7D786E] hover:bg-white'
+                        }`}
+                      >
+                        <div className="text-xs font-bold">{b.name}</div>
+                        <div className="text-[10px] opacity-80">{isRtl ? b.archetype : b.characterDescription.split(',')[0]}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1397,6 +1481,17 @@ export const CustomVoiceModal: React.FC<CustomVoiceModalProps> = ({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: VOCAL CORDS DYNAMICS & GLOTTAL MECHANICS */}
+          {activeTab === 'vocalCords' && (
+            <div className="space-y-4 animate-fade-in">
+              <VocalCordsControl
+                customization={currentCustomization}
+                onChange={handleVocalCordsUpdate}
+                isRtl={isRtl}
+              />
             </div>
           )}
 

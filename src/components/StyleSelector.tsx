@@ -528,9 +528,13 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
                         ? isRtl
                           ? 'مستوى 2'
                           : 'Lvl 2'
+                        : selectedIntensity === 'high'
+                        ? isRtl
+                          ? 'مستوى 3'
+                          : 'Lvl 3'
                         : isRtl
-                        ? 'مستوى 3'
-                        : 'Lvl 3'}
+                        ? 'مستوى 4'
+                        : 'Lvl 4'}
                     </span>
                   )}
                 </div>

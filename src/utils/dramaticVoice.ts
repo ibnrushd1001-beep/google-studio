@@ -1178,6 +1178,7 @@ export function buildDramaticPrompt(
     const opts = customizationOrOptions as BuildDramaticPromptOptions;
     const v = opts.voiceOption;
     customization = {
+      baseVoice: v?.baseVoice || opts.customization?.baseVoice,
       gender: v?.gender || opts.customization?.gender || 'male',
       age: v?.customization?.age || opts.customization?.age || 'youth_18_35',
       dialect: opts.currentDialect || opts.customization?.dialect || 'cairo',
@@ -1200,31 +1201,44 @@ export function buildDramaticPrompt(
         extraInstruction.includes('الكاشف')));
   const isCasual = customization.isCasualConversation;
   const genderWord = customization.gender === 'female' ? 'female' : 'male';
-  const isChild = (customization.exactAge || 10) <= 15;
-  const baseTractName =
-    customization.gender === 'female'
-      ? isChild ? 'Zephyr' : 'Kore/Zephyr'
-      : isChild ? 'Puck' : 'Fenrir/Puck';
+  const speakerAge = customization.exactAge || 30;
+  const isChild = speakerAge <= 15;
 
-  // 1. Core Speaker Identity Anchor & Prompt Dominance Shield (TOP PRIORITY)
-  // Prevents dramatic emotion prompts from overriding the speaker's vocal anatomy
+  // Harmonize base voice and age: completely eliminates acoustic contradiction between larynx and age
+  const actualBaseVoice =
+    customization.baseVoice ||
+    (customization.gender === 'female' ? (isChild ? 'Zephyr' : 'Kore') : (isChild ? 'Puck' : 'Fenrir'));
+
+  let vocalTractHarmonization = '';
+  if (isChild) {
+    if (actualBaseVoice === 'Fenrir' || actualBaseVoice === 'Charon') {
+      vocalTractHarmonization = `Rooted in the ${actualBaseVoice} acoustic formant but adapted to a young ${speakerAge}-year-old boy's smaller vocal tract, maintaining a childlike larynx with slightly deeper warmth`;
+    } else if (actualBaseVoice === 'Kore') {
+      vocalTractHarmonization = `Rooted in the Kore acoustic formant but adapted to a young ${speakerAge}-year-old girl's small vocal tract and higher childlike pitch register`;
+    } else {
+      vocalTractHarmonization = `Innocent, bright ${speakerAge}-year-old childlike larynx and vocal tract (${actualBaseVoice})`;
+    }
+  } else if (speakerAge >= 60) {
+    if (actualBaseVoice === 'Zephyr' || actualBaseVoice === 'Puck') {
+      vocalTractHarmonization = `A seasoned, mature ${speakerAge}-year-old elder vocal tract based on the ${actualBaseVoice} formant, resonating with authentic aged nuance and natural elder gravitas`;
+    } else {
+      vocalTractHarmonization = `Resonant, dignified ${speakerAge}-year-old mature elder larynx and vocal tract (${actualBaseVoice})`;
+    }
+  } else {
+    vocalTractHarmonization = `Authentic adult ${speakerAge}-year-old ${genderWord} vocal tract (${actualBaseVoice})`;
+  }
+
+  // 1. Core Speaker Identity Anchor & Subordination Mandate
   const identityLock = isEnergyOrb
-    ? 'CRITICAL SPEAKER IDENTITY LOCK - NABD / SCIENTIFIC REVEALER: The speaker is strictly "Nabd": a luminous, ageless, genderless, universal sphere of pure human consciousness. The Revealer is an auditory instrument representing the process of awareness itself. The character is forged entirely through its disciplined method of thinking, never through emotional reactivity. Do not rush, do not sneer, and do not become melodramatic. You are the steady, objective voice that explains, reveals, and dissects with calm clarity: "Pause for a moment...". Sound Design ID: Combine the calm confidence of the lucid revealer and the grounded certitude of an empirical scientist in a forensic investigation chamber. The Revealer illuminates the event with unwavering analytical composure'
-    : isChild
-    ? `CRITICAL SPEAKER IDENTITY LOCK: The speaker is strictly a young Egyptian ${
-        customization.gender === 'female' ? 'girl' : 'boy'
-      }, exactly ${customization.exactAge || 10} years old. Base vocal tract: ${baseTractName} (pure, innocent, bright youthful larynx). This physical vocal tract, childlike larynx, and natural pitch register MUST remain 100% stable throughout. Under NO circumstances should emotional descriptors turn this voice into an adult, a different speaker, or a theatrical caricature. The emotion is felt by this exact child`
-    : `CRITICAL SPEAKER IDENTITY LOCK: You MUST strictly preserve the underlying ${genderWord} persona, physical vocal tract, and acoustic identity. The emotion is an expressive nuance felt by this EXACT character, never a new speaker, different larynx, or distorted vocal identity`;
-
-  const promptDominanceShield =
-    'PROMPT DOMINANCE PREVENTION: All following emotional descriptors are subordinate to the Speaker Identity Lock above. Do NOT allow affective adjectives to alter the fundamental voice timbre, age, or vocal tract of the speaker';
+    ? 'CRITICAL SPEAKER IDENTITY LOCK - NABD / SCIENTIFIC REVEALER: The speaker is strictly "Nabd": a luminous, ageless, genderless, universal sphere of pure human consciousness. The Revealer is an auditory instrument representing the process of awareness itself. The character is forged entirely through its disciplined method of thinking, never through emotional reactivity. Do not rush, do not sneer, and do not become melodramatic. You are the steady, objective voice that explains, reveals, and dissects with calm clarity. Sound Design ID: Combine the calm confidence of the lucid revealer and the grounded certitude of an empirical scientist in a forensic investigation chamber. The Revealer illuminates the event with unwavering analytical composure'
+    : `CRITICAL SPEAKER IDENTITY LOCK: The speaker is an authentic Egyptian ${genderWord}, exactly ${speakerAge} years old. ${vocalTractHarmonization}. This vocal anatomy and acoustic identity MUST remain 100% stable throughout. All affective descriptors are subordinate to this identity and must never alter the speaker's fundamental voice timbre, age, or vocal tract`;
 
   // 2. Studio Quality & Sound Design Mandate
   const studioMandate = isEnergyOrb
-    ? 'Sound Design Mandate: Studio recording designed as a Scientific Investigation Chamber. Crystal-clear forensic speech clarity, transparent acoustic presence, zero room flutter or theatrical melodrama, clinical intelligibility, and unwavering analytical composure'
+    ? 'Sound Design Mandate: Studio recording designed as a Scientific Investigation Chamber. Crystal-clear forensic speech clarity, transparent acoustic presence, zero room flutter, and clinical intelligibility'
     : isCasual
-    ? 'Studio-grade acoustic recording with pristine crystal-clear purity, zero background noise or distortion, and 100% genuine everyday colloquial Egyptian conversational delivery with zero theatrical exaggeration or melodrama'
-    : 'Studio-grade acoustic recording with crystal-clear high fidelity, pristine vocal purity, zero background noise or distortion, and 100% natural human dramatic character acting without robotic or synthetic artifacts';
+    ? 'Pristine studio acoustic recording with crystal-clear purity, zero background noise, and 100% genuine colloquial Egyptian conversational delivery'
+    : 'Studio-grade acoustic recording with crystal-clear high fidelity, pristine vocal purity, zero background noise, and 100% natural dramatic character acting without robotic artifacts';
 
   // 3. Dialect & Sub-Style
   const dialectInfo = DIALECTS[customization.dialect || 'cairo'];
@@ -1232,16 +1246,15 @@ export function buildDramaticPrompt(
     (s) => s.id === customization.dialectSubStyle
   );
   const dialectDirective = isEnergyOrb
-    ? 'Phonetic register: Highly articulate, educated, and universally intelligible Egyptian Arabic delivery with clinical phonetics, zero street slang or caricature'
+    ? 'Phonetic register: Highly articulate, educated, and universally intelligible Egyptian Arabic delivery with clinical phonetics'
     : subStyleInfo
     ? `${dialectInfo.promptDirective}. ${subStyleInfo.directive}`
     : dialectInfo.promptDirective;
 
-  // 4. Exact Age & Gender Directives
+  // 4. Exact Age & Persona Harmonization Directive
   let ageDirective = '';
   if (isEnergyOrb) {
-    ageDirective =
-      'Entity persona: Timeless, ageless, and non-gendered energy orb of pure consciousness';
+    ageDirective = 'Entity persona: Timeless, ageless, and non-gendered energy orb of pure consciousness';
   } else if (customization.exactAge) {
     const stage = getStageFromAge(customization.exactAge);
     ageDirective = `Character persona: ${genderWord}, exactly ${customization.exactAge} years old. ${stage.directive}`;
@@ -1275,7 +1288,7 @@ export function buildDramaticPrompt(
     .filter(Boolean)
     .join('. ');
 
-  // 7. Pace & Breathing
+  // 7. Pace & Breathing (Streamlined: non-conflicting tempo & breathflow)
   const paceInfo = PACE_OPTIONS.find((pc) => pc.id === customization.pace);
   const breathingInfo = BREATHING_OPTIONS.find(
     (b) => b.id === customization.breathing
@@ -1287,7 +1300,7 @@ export function buildDramaticPrompt(
     .filter(Boolean)
     .join('. ');
 
-  // 8. Overarching Delivery Style (Decoupled from Emotion)
+  // 8. Overarching Delivery Style (Acting medium)
   let deliveryDirective = '';
   if (customization.deliveryStyle && DELIVERY_STYLE_DIRECTIVES[customization.deliveryStyle]) {
     deliveryDirective = DELIVERY_STYLE_DIRECTIVES[customization.deliveryStyle].directive;
@@ -1295,7 +1308,7 @@ export function buildDramaticPrompt(
     deliveryDirective = DELIVERY_STYLE_DIRECTIVES.casual_talk.directive;
   }
 
-  // 8.5. Dedicated Vocal Cords Dynamics (انغلاق ورعشة الأحبال الصوتية)
+  // 8.5. Dedicated Vocal Cords Dynamics (Glottal mechanics)
   const vocalCordsParts: string[] = [];
   if (customization.vocalCordsTension) {
     const tensionOpt = VOCAL_CORDS_TENSION_OPTIONS.find((t) => t.id === customization.vocalCordsTension);
@@ -1307,53 +1320,53 @@ export function buildDramaticPrompt(
   }
   const vocalCordsDirective = vocalCordsParts.join('. ');
 
-  // 8.6. Acoustic Staging Proximity & Mic Distance (المسافة الصوتية وقرب الميكروفون)
+  // 8.6. Acoustic Staging Proximity & Mic Distance
   let stagingDirective = '';
   if (customization.stagingDistance) {
     const stOpt = STAGING_OPTIONS.find((s) => s.id === customization.stagingDistance);
     if (stOpt) stagingDirective = stOpt.directive;
   }
 
-  // 8.7. Dynamic Emotional Arc (المنحنى الشعوري التدريجي في الجملة)
+  // 8.7. Dynamic Emotional Arc
   let emotionalArcDirective = '';
   if (customization.emotionalArc?.enabled) {
     const startName = customization.emotionalArc.startEmotion || customization.emotionalArc.startEmotionId || 'initial composure';
     const targetName = customization.emotionalArc.targetEmotion || customization.emotionalArc.targetEmotionId || 'climactic peak';
     const transPoint = customization.emotionalArc.climaxPoint || customization.emotionalArc.transitionPoint || 'final third';
-    emotionalArcDirective = `DYNAMIC EMOTIONAL ARC: Deliver with dynamic emotional progression. Begin with tone of ${startName}, smoothly transitioning around ${transPoint} of speech into ${targetName} with authentic psychological escalation`;
+    emotionalArcDirective = `DYNAMIC EMOTIONAL ARC: Deliver with dynamic emotional progression. Begin with tone of ${startName}, smoothly transitioning around ${transPoint} into ${targetName}`;
   }
 
-  // 8.8. Natural Thought Hesitation Beats (سكتات التردد الطبيعية)
+  // 8.8. Natural Thought Hesitation Beats (Concise: only active when enabled)
   let hesitationDirective = '';
   if (customization.smartHesitationBeats) {
     hesitationDirective =
-      'NATURAL HESITATION & THOUGHT BEATS: Respect all commas and punctuation as organic 250ms thinking micro-hesitations, reflecting spontaneous human thought-formation before important words';
+      'NATURAL HESITATION: Honor punctuation as organic 200ms thinking pauses reflecting spontaneous human thought-formation';
   }
 
-  // 9. Emotional Nuance & Tone Coloring (Decoupled & Fine-Tuned)
+  // 9. Emotional Nuance & Tone Coloring (Decoupled, Fine-Tuned with all 4 Tiers)
   let emotionDirective = '';
   if (emotionPrefix && emotionPrefix.trim()) {
     const intensity = customization.emotionIntensity || 'medium';
     let intensityDirective = '';
     if (intensity === 'low') {
       intensityDirective =
-        'Intensity Level: Gentle & Restrained. Express this feeling softly and naturally without vocal strain or shouting, keeping the speaker voice completely recognizable and steady';
+        'Intensity: Restrained & Subtle. Express this feeling softly and naturally without vocal strain or shouting, keeping the speaker voice completely recognizable';
     } else if (intensity === 'medium') {
       intensityDirective =
-        'Intensity Level: Balanced & Natural. Express this emotion clearly yet naturally, fully maintaining the original vocal character and pitch register';
+        'Intensity: Balanced & Natural. Express this emotion clearly yet naturally, fully maintaining the original vocal character';
     } else if (intensity === 'high') {
       intensityDirective =
-        'Intensity Level: Theatrical yet anchored. Express the emotion vividly while strictly keeping the speaker identity anchored';
+        'Intensity: Vivid & Theatrical. Express the emotion vividly while strictly keeping the speaker identity anchored';
     } else {
       intensityDirective =
-        'Intensity Level: Extreme Climactic Peak (Tier 4). Deliver with maximum dramatic intensity, electrifying conviction, and climactic emotional resonance while maintaining pristine phonetic clarity';
+        'Intensity: Extreme Climactic Peak (Level 4). Deliver with maximum dramatic intensity, electrifying conviction, and climactic emotional resonance';
     }
-    emotionDirective = `EMOTIONAL COLORING (Subordinated to Character Identity): ${emotionPrefix.trim()}. ${intensityDirective}`;
+    emotionDirective = `EMOTIONAL COLORING: ${emotionPrefix.trim()}. ${intensityDirective}`;
   }
 
-  // 10. Gestural Restriction (Strictly NO unprompted laughter, giggling, smiling or sighing)
+  // 10. Gestural Restriction (Strictly NO unprompted laughter or sighs)
   const gesturalRestriction =
-    'ABSOLUTE GESTURAL PURITY RULE: Do NOT produce any laughing, chuckling, giggling, smiling phonation, gasping, or sighing sounds unless the script text explicitly contains an exact bracketed tag. Emotional inflections and tones must ONLY modulate pitch, rhythm, cadence, and mood without any unprompted sighs, chuckles, or laughter';
+    'ABSOLUTE GESTURAL PURITY: Do NOT produce any laughing, chuckling, giggling, smiling phonation, gasping, or sighing sounds unless the script text explicitly contains an exact bracketed tag. Emotional inflections and tones must ONLY modulate pitch, rhythm, cadence, and mood';
 
   // 11. Reverb & Acoustic Recording Environment Directive
   let reverbDirective = '';
@@ -1364,13 +1377,12 @@ export function buildDramaticPrompt(
       : (reverbEnv === 'dry_studio' ? 0 : REVERB_ENVIRONMENTS[reverbEnv]?.defaultLevel || 40);
   const envInfo = REVERB_ENVIRONMENTS[reverbEnv] || REVERB_ENVIRONMENTS.dry_studio;
   reverbDirective = isEnergyOrb && (reverbEnv === 'small_room' || reverbEnv === 'dry_studio')
-    ? `Acoustic sound design environment: Scientific Investigation Chamber. Forensic analytical vocal capture with ${rawLevel}% subtle acoustic presence, razor-sharp speech transparency, near-field clinical clarity, and zero theatrical melodrama`
+    ? `Acoustic sound design environment: Scientific Investigation Chamber. Forensic analytical vocal capture with ${rawLevel}% subtle acoustic presence and razor-sharp speech transparency`
     : envInfo.directive(rawLevel);
 
-  // 12. Assemble Prompt Directives in strict priority order
+  // 12. Assemble Prompt Directives in strict priority order (Pruned, no contradictions)
   const parts: string[] = [
     identityLock,
-    promptDominanceShield,
     gesturalRestriction,
     studioMandate,
     dialectDirective,

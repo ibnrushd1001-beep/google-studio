@@ -44,6 +44,11 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({
   // Editable cloned voice fields
   const [cloneName, setCloneName] = useState<string>('');
   const [cloneArabicName, setCloneArabicName] = useState<string>('');
+  const [analysisMethod, setAnalysisMethod] = useState<string>('gemini_multimodal');
+  const [isFallback, setIsFallback] = useState<boolean>(false);
+  const [cloneGender, setCloneGender] = useState<Gender>('female');
+  const [cloneExactAge, setCloneExactAge] = useState<number>(28);
+  const [cloneBaseVoice, setCloneBaseVoice] = useState<VoiceName>('Kore');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -177,6 +182,15 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({
       }
 
       setAnalysisResult(data.analysis);
+      setAnalysisMethod(data.analysisMethod || 'gemini_multimodal');
+      setIsFallback(!!data.isFallback);
+      const detectedGender: Gender = data.analysis.gender === 'male' ? 'male' : 'female';
+      const detectedAge: number = data.analysis.exactAge || 28;
+      const detectedBaseVoice: VoiceName = data.analysis.recommendedBaseVoice || (detectedGender === 'male' ? 'Charon' : 'Kore');
+
+      setCloneGender(detectedGender);
+      setCloneExactAge(detectedAge);
+      setCloneBaseVoice(detectedBaseVoice);
       setCloneName(data.analysis.name || `Cloned - ${selectedFile.name.split('.')[0]}`);
       setCloneArabicName(data.analysis.arabicName || 'صوت مستنسخ عالي الدقة');
     } catch (err: any) {
@@ -190,10 +204,23 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({
   const handleSaveAndAdopt = () => {
     if (!analysisResult) return;
 
-    const baseVoice: VoiceName = analysisResult.recommendedBaseVoice || 'Zephyr';
-    const gender: Gender = analysisResult.gender === 'male' ? 'male' : 'female';
-    const exactAge = analysisResult.exactAge || 25;
+    const baseVoice: VoiceName = cloneBaseVoice;
+    const gender: Gender = cloneGender;
+    const exactAge = Number(cloneExactAge) || 28;
     const dialect: EgyptianDialect = analysisResult.dialect === 'alex' ? 'alex' : 'cairo';
+
+    const ageStage =
+      exactAge <= 8
+        ? 'child_5_8'
+        : exactAge <= 12
+        ? 'child_9_12'
+        : exactAge <= 17
+        ? 'teen_12_17'
+        : exactAge <= 35
+        ? 'youth_18_35'
+        : exactAge <= 55
+        ? 'mature_36_55'
+        : 'elder_56_85';
 
     const newCustomPreset: CustomVoicePreset = {
       id: `clone_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
@@ -212,7 +239,7 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({
       customization: {
         gender,
         exactAge,
-        age: analysisResult.ageStage || 'youth_18_35',
+        age: ageStage,
         dialect,
         pitch: analysisResult.pitch || 'medium',
         melody: analysisResult.melody || 'balanced_natural',
@@ -221,7 +248,9 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({
         texture: analysisResult.texture || 'pure',
         pace: analysisResult.pace || 'balanced',
         breathing: analysisResult.breathing || 'calm_deep',
-        baseVoiceLock: true,
+        baseVoiceLock: false,
+        reverbEnvironment: analysisResult.reverbEnvironment || 'dry_studio',
+        reverbLevel: analysisResult.reverbLevel !== undefined ? analysisResult.reverbLevel : 0,
         customNotes: `استنساخ صوتي دقيق: ${analysisResult.vocalCordsAnalysis || ''}`,
       },
       createdAt: Date.now(),
@@ -428,6 +457,143 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({
                 </span>
               </div>
 
+              {/* Method & Quota Protection Banner */}
+              {analysisMethod === 'dsp_acoustic_engine' ? (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 text-xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold flex items-center gap-2">
+                        <span>المحلل الطيفي الفيزيائي المباشر (Acoustic DSP)</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-600 text-white font-mono">
+                          F0: {analysisResult.estimatedF0Hz} Hz
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        تم قياس التردد الأساسي للأحبال الصوتية مباشرة من الموجة الصوتية بدقة رياضية 100% دون أي اعتماد على اسم الملف (حماية كاملة ضد نفاد الكوتة).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 text-xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold flex items-center gap-2">
+                        <span>تحليل الذكاء الاصطناعي متعدد الوسائط + الفحص الطيفي</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-mono">
+                          F0: {analysisResult.estimatedF0Hz || 211} Hz
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 mt-0.5">
+                        تم التنسيق التلقائي بين نموذج الفحص السمعي والتردد الفيزيائي للموجة الصوتية بدقة فائقة.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Fine-Tuning Controls */}
+              <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E5E1D8] space-y-3">
+                <div className="text-xs font-bold text-[#343230] flex items-center justify-between">
+                  <span>تأكيد أو تعديل المعالم الأساسية قبل الحفظ:</span>
+                  <span className="text-[10px] text-[#7D786E]">يمكنك تعديل أي قيمة بنقرة واحدة</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Gender Selector */}
+                  <div>
+                    <span className="text-[11px] font-bold text-[#5F5C56] block mb-1.5">الجنس:</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCloneGender('female');
+                          if (['Charon', 'Fenrir', 'Puck'].includes(cloneBaseVoice)) {
+                            setCloneBaseVoice('Kore');
+                          }
+                        }}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                          cloneGender === 'female'
+                            ? 'bg-[#C86446] text-white border-[#C86446]'
+                            : 'bg-white text-[#5F5C56] border-[#DCD7CC] hover:bg-[#F5F2EB]'
+                        }`}
+                      >
+                        أنثى (Female)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCloneGender('male');
+                          if (['Kore', 'Zephyr', 'Leda', 'Aoede', 'Calliope'].includes(cloneBaseVoice)) {
+                            setCloneBaseVoice('Fenrir');
+                          }
+                        }}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                          cloneGender === 'male'
+                            ? 'bg-[#C86446] text-white border-[#C86446]'
+                            : 'bg-white text-[#5F5C56] border-[#DCD7CC] hover:bg-[#F5F2EB]'
+                        }`}
+                      >
+                        ذكر (Male)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Age Input */}
+                  <div>
+                    <span className="text-[11px] font-bold text-[#5F5C56] block mb-1.5">
+                      العمر الدقيق: <span className="text-[#C86446] font-extrabold">{cloneExactAge} سنة</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={6}
+                      max={80}
+                      value={cloneExactAge}
+                      onChange={(e) => setCloneExactAge(Number(e.target.value))}
+                      className="w-full accent-[#C86446] cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-[#7D786E]">
+                      <span>6 سنوات</span>
+                      <span>30 سنة</span>
+                      <span>80 سنة</span>
+                    </div>
+                  </div>
+
+                  {/* Base Voice Selector */}
+                  <div>
+                    <span className="text-[11px] font-bold text-[#5F5C56] block mb-1.5">الحنجرة الأساسية (Base Voice):</span>
+                    <select
+                      value={cloneBaseVoice}
+                      onChange={(e) => setCloneBaseVoice(e.target.value as VoiceName)}
+                      className="w-full p-2 text-xs bg-white border border-[#DCD7CC] rounded-lg font-bold text-[#343230] focus:outline-none focus:ring-1 focus:ring-[#C86446]"
+                    >
+                      {cloneGender === 'female' ? (
+                        <>
+                          <option value="Kore">Kore - حنجرة دافئة متوازنة (مثالية للأصوات النسائية مثل Leda)</option>
+                          <option value="Zephyr">Zephyr - حنجرة شابة رنانة ونقية</option>
+                          <option value="Aoede">Aoede - حنجرة رصينة وواثقة</option>
+                          <option value="Calliope">Calliope - حنجرة حيوية معبرة</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Charon">Charon - حنجرة وقورة عميقة ورنانة</option>
+                          <option value="Fenrir">Fenrir - حنجرة شبابية متوسطة قوية</option>
+                          <option value="Puck">Puck - حنجرة مرنة حيوية</option>
+                          <option value="Orus">Orus - حنجرة هادئة ناعمة</option>
+                          <option value="Enceladus">Enceladus - حنجرة ناضجة رصينة</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* Editable Name & Arabic Label */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -459,14 +625,14 @@ export const VoiceCloneModal: React.FC<VoiceCloneModalProps> = ({
                 <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EAE6DD]">
                   <span className="text-[10px] text-[#7D786E] block">العمر والجنس المقدر</span>
                   <div className="font-extrabold text-[#343230] mt-0.5">
-                    {analysisResult.exactAge} سنة ({analysisResult.gender === 'female' ? 'أنثى' : 'ذكر'})
+                    {cloneExactAge} سنة ({cloneGender === 'female' ? 'أنثى' : 'ذكر'})
                   </div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EAE6DD]">
                   <span className="text-[10px] text-[#7D786E] block">الحنجرة الأساسية (Base)</span>
                   <div className="font-extrabold text-[#C86446] mt-0.5">
-                    {analysisResult.recommendedBaseVoice}
+                    {cloneBaseVoice}
                   </div>
                 </div>
 

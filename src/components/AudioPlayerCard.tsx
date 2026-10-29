@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GeneratedSpeech, ReverbEnvironment } from '../types';
+import { GeneratedSpeech, ReverbEnvironment, VocalAnalysisResult } from '../types';
 import {
   Play,
   Pause,
@@ -16,7 +16,9 @@ import {
   Theater,
   Sparkles,
   Sliders,
+  Activity,
 } from 'lucide-react';
+import { VocalAnalysisPopover } from './VocalAnalysisPopover';
 import {
   downloadAudioFile,
   downloadBlobFile,
@@ -66,6 +68,13 @@ export const AudioPlayerCard: React.FC<AudioPlayerCardProps> = ({ speech, isRtl 
   const [isProcessingReverb, setIsProcessingReverb] = useState<boolean>(false);
   const [showReverbLab, setShowReverbLab] = useState<boolean>(false);
 
+  // Vocal Analysis Popover State
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState<boolean>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [analysisResult, setAnalysisResult] = useState<VocalAnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [lastAnalyzedId, setLastAnalyzedId] = useState<string | null>(null);
+
   // Sync state whenever new speech is generated
   useEffect(() => {
     const nextEnv: ReverbEnvironment = speech.reverbEnvironment || 'dry_studio';
@@ -85,6 +94,13 @@ export const AudioPlayerCard: React.FC<AudioPlayerCardProps> = ({ speech, isRtl 
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(speech.durationSec || 0);
+
+    // Close analysis popover for newly generated speech unless same id
+    if (lastAnalyzedId !== speech.id) {
+      setIsAnalysisOpen(false);
+      setAnalysisResult(null);
+      setAnalysisError(null);
+    }
 
     if (!hasReverb) {
       setEffectiveAudioUrl(speech.audioUrl);
@@ -107,6 +123,55 @@ export const AudioPlayerCard: React.FC<AudioPlayerCardProps> = ({ speech, isRtl 
         });
     }
   }, [speech.id, speech.audioUrl, speech.reverbEnvironment, speech.reverbLevel]);
+
+  // Perform vocal analysis via Gemini multimodal audio model
+  const fetchVocalAnalysis = async () => {
+    if (!speech.audioBase64) return;
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+
+    try {
+      const response = await fetch('/api/voice/analyze-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          audioBase64: speech.audioBase64,
+          mimeType: 'audio/wav',
+          text: speech.text,
+          voice: speech.voiceDisplayName || speech.voice,
+          emotion: speech.emotionLabel || speech.styleLabel || '',
+          intensity: speech.intensityLabel || '',
+          deliveryStyle: speech.deliveryStyleLabel || speech.deliveryStyle || '',
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze vocal audio.');
+      }
+
+      setAnalysisResult(data.analysis);
+      setLastAnalyzedId(speech.id);
+    } catch (err: any) {
+      console.error('Vocal analysis error:', err);
+      setAnalysisError(err?.message || (isRtl ? 'تعذر تحليل خصائص الصوت حالياً.' : 'Failed to analyze voice characteristics.'));
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleToggleVocalAnalysis = () => {
+    if (isAnalysisOpen) {
+      setIsAnalysisOpen(false);
+      return;
+    }
+    setIsAnalysisOpen(true);
+    if (!analysisResult || lastAnalyzedId !== speech.id) {
+      fetchVocalAnalysis();
+    }
+  };
 
   // Handle re-processing when user changes reverb parameters live in the player
   const recomputeReverb = async (env: ReverbEnvironment, level: number, enabled: boolean) => {
@@ -431,8 +496,27 @@ export const AudioPlayerCard: React.FC<AudioPlayerCardProps> = ({ speech, isRtl 
           </button>
         </div>
 
-        {/* Action Buttons: Copy & Download */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons: Vocal Analysis, Copy & Download */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* AI Vocal Analysis Trigger Button */}
+          <button
+            id="vocal-analysis-btn"
+            type="button"
+            onClick={handleToggleVocalAnalysis}
+            className={`inline-flex items-center gap-1.5 px-3.5 h-9 rounded-full border text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+              isAnalysisOpen
+                ? 'bg-[#C86446] text-white border-[#C86446] ring-2 ring-[#C86446]/25'
+                : 'bg-white hover:bg-[#FAF8F5] border-[#C86446]/40 hover:border-[#C86446] text-[#C86446]'
+            }`}
+            title={isRtl ? 'تحليل الخصائص الصوتية ونقاء النبرة بذكاء Gemini' : 'AI Vocal Characteristics Analysis with Gemini'}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>{isRtl ? 'تحليل خصائص الصوت ✨' : 'Vocal Analysis ✨'}</span>
+            {isAnalyzing && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            )}
+          </button>
+
           <button
             id="copy-text-btn"
             type="button"
@@ -482,6 +566,17 @@ export const AudioPlayerCard: React.FC<AudioPlayerCardProps> = ({ speech, isRtl 
           </div>
         </div>
       </div>
+
+      {/* Vocal Analysis Popover (التحليل الصوتي المتقدم مع نموذج Gemini) */}
+      <VocalAnalysisPopover
+        isOpen={isAnalysisOpen}
+        onClose={() => setIsAnalysisOpen(false)}
+        isLoading={isAnalyzing}
+        analysis={analysisResult}
+        errorMessage={analysisError}
+        onReanalyze={fetchVocalAnalysis}
+        isRtl={isRtl}
+      />
 
       {/* Expandable Live Acoustic Reverb Tray */}
       {showReverbLab && (

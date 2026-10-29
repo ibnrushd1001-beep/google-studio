@@ -136,6 +136,9 @@ export interface VoiceCustomization {
   emotionIntensity?: EmotionIntensity;
   selectedEmotionId?: string;
 
+  // Base Voice reference
+  baseVoice?: VoiceName;
+
   customNotes?: string;
 }
 
@@ -366,4 +369,30 @@ export interface StudioSectionTitles {
   reverbEnvironment: SectionTitleConfig;
   readyAndPillars: SectionTitleConfig;
   audioPlayer: SectionTitleConfig;
+}
+
+// AI Vocal Analysis Result from Gemini Multimodal Audio
+export interface VocalMetricDetail {
+  score: number;
+  status: 'excellent' | 'good' | 'moderate' | 'needs_tuning';
+  arabicLabel: string;
+  feedback: string;
+}
+
+export interface VocalAnatomyAnalysis {
+  larynxPosition: string;
+  cordTension: string;
+  resonanceChamber: string;
+}
+
+export interface VocalAnalysisResult {
+  overallScore: number;
+  overallVerdict: string;
+  emotionalConsistency: VocalMetricDetail;
+  pitchStability: VocalMetricDetail;
+  clarityAndDiction: VocalMetricDetail;
+  vocalAnatomy: VocalAnatomyAnalysis;
+  directorNotes: string[];
+  analyzedAt?: number;
+  isFallback?: boolean;
 }

@@ -11,7 +11,6 @@ import { BackupRestoreModal, StudioBackupData } from './components/BackupRestore
 import { VocalGuideModal, VocalRecipe } from './components/VocalGuideModal';
 import { ReverbEnvironmentControl } from './components/ReverbEnvironmentControl';
 import { SectionTitlesModal, DEFAULT_SECTION_TITLES } from './components/SectionTitlesModal';
-import { VocalCordsControl } from './components/VocalCordsControl';
 import { BatchWorkspace } from './components/BatchWorkspace';
 import {
   VoiceOption,
@@ -29,6 +28,7 @@ import { EMOTIONS } from './emotions';
 import {
   sanitizeGeminiVoice,
   buildDramaticPrompt,
+  getEmotionLevel,
   DELIVERY_STYLE_DIRECTIVES,
   PITCH_OPTIONS,
   AGE_OPTIONS,
@@ -370,16 +370,16 @@ export default function App() {
 
   // Quick customizer modal trigger and target tab
   const [isQuickCustomizerOpen, setIsQuickCustomizerOpen] = useState<boolean>(false);
-  const [quickCustomizerTab, setQuickCustomizerTab] = useState<'elements' | 'baseVoice' | 'preview'>('elements');
+  const [quickCustomizerTab, setQuickCustomizerTab] = useState<'elements' | 'vocalCords' | 'baseVoice' | 'preview'>('elements');
 
-  const openCustomizerWithTab = (tab: 'elements' | 'baseVoice' | 'preview') => {
+  const openCustomizerWithTab = (tab: 'elements' | 'vocalCords' | 'baseVoice' | 'preview') => {
     setQuickCustomizerTab(tab);
     setIsQuickCustomizerOpen(true);
   };
 
   const activeEmotion =
     EMOTIONS.find((e) => e.id === selectedEmotionId) || EMOTIONS[0];
-  const activeLevel = activeEmotion.levels[selectedIntensity] || activeEmotion.levels.medium;
+  const activeLevel = getEmotionLevel(activeEmotion, selectedIntensity);
 
   // Resolve current active dramatic acting element labels
   const activePitchInfo = PITCH_OPTIONS.find(
@@ -786,6 +786,7 @@ export default function App() {
     try {
       // Assemble full dramatic acting instructions
       const effectiveCustomization: VoiceCustomization = {
+        baseVoice: selectedVoiceOption.baseVoice,
         gender: selectedVoiceOption.gender,
         exactAge:
           selectedVoiceOption.exactAge ||
@@ -820,6 +821,8 @@ export default function App() {
           selectedVoiceOption.isEnergyOrb ||
           selectedVoiceOption.customization?.isEnergyOrb ||
           selectedVoiceOption.id.includes('nabd'),
+        emotionIntensity: selectedIntensity,
+        selectedEmotionId: selectedEmotionId,
         customNotes: selectedVoiceOption.customization?.customNotes,
         vocalCordsTension: selectedVoiceOption.customization?.vocalCordsTension,
         vocalCordTremor: selectedVoiceOption.customization?.vocalCordTremor,
@@ -1537,14 +1540,7 @@ export default function App() {
               )}
             </div>
 
-            {/* 4. Dedicated Vocal Cords Dynamics & Advanced Dramatic Acting (تحكم الأحبال الصوتية والمقترحات 1 و 2 و 4) */}
-            <VocalCordsControl
-              customization={selectedVoiceOption.customization}
-              onChange={handleVocalCordsChange}
-              isRtl={isRtl}
-            />
-
-            {/* 5. Standalone Reverb & Acoustic Environment Control (صدى الصوت والبيئة الصوتية منفصلة تماماً خارج استوديو التخصيص) */}
+            {/* 4. Standalone Reverb & Acoustic Environment Control (صدى الصوت والبيئة الصوتية منفصلة تماماً خارج استوديو التخصيص) */}
             <ReverbEnvironmentControl
               reverbEnvironment={selectedReverbEnv}
               reverbLevel={selectedReverbLevel}
